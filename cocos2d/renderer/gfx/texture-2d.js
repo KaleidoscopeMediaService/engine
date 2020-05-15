@@ -34,12 +34,12 @@ export default class Texture2D extends Texture {
     const checkTypeValue = Object.prototype.toString.call(options.image);
 
     ///　20200115 ビデオデータのテクスチャ変換に伴う追加処理 ///
-    if (checkTypeValue.includes("HTMLVideoElement")) {
+    if (checkTypeValue.indexOf("HTMLVideoElement") >= 0) {
       this._video = options.video;
       this.isRenderring = true;
       this._initVideoTexture(gl);
 
-    } else {      
+    } else {
       this.update(options);
 
     }
@@ -365,7 +365,7 @@ export default class Texture2D extends Texture {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
-    this.isRenderring  = true;
+    this.isRenderring = true;
 
   }
 
@@ -374,7 +374,7 @@ export default class Texture2D extends Texture {
    * @method _updateVideoTexture
    * @param {HTMLVideoElement} video 
    */
-  _updateVideoTexture(video){
+  _updateVideoTexture(video) {
 
     let gl = this._device._gl;
 
