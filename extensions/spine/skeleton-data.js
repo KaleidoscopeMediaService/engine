@@ -79,6 +79,15 @@ let SkeletonData = cc.Class({
             }
         },
 
+        skeletonBinary: {
+            get: function () {
+                return this._nativeAsset;
+            },
+            set: function (value) {
+                this._nativeAsset = value;
+            }
+        },
+
         _atlasText: "",
 
         /**
