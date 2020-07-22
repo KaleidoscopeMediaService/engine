@@ -1569,6 +1569,18 @@ let NodeDefines = {
                 this._update3DFunction();
             }
         },
+
+        /**
+         * !#en
+         * Returns whether node related to prefab.
+         * !#zh
+         * @property {Boolean} p
+         */
+        isRelatedToPrefab: {
+            get() {
+                return !!this._prefab;
+            }
+        }
     },
 
     /**
