@@ -784,7 +784,7 @@ function initSys () {
              * Indicate whether system is mobile system
              * @property {Boolean} isMobile
              */
-            sys.isMobile = /mobile|android|iphone|ipad/.test(ua);
+            sys.isMobile = /mobile|android|iphone|ipad/.test(ua) || (ua.indexOf('macintosh') > -1 && 'ontouchend' in document);
 
             /**
              * Indicate the running platform
