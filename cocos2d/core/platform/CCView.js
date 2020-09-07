@@ -1062,7 +1062,7 @@ cc.ContainerStrategy = cc.Class({
     _setupContainer: function (view, w, h) {
         var gameDiv = document.getElementById("GameDiv");
 
-        if (!CC_EDITOR && cc.sys.isMobile && !!gameDiv) {
+        if (!CC_EDITOR && cc.sys.isMobile) {
             if (gameDiv.style.width.includes("px") && cc.sys.os !== cc.sys.OS_IOS) {
                 w = Number(gameDiv.style.width.match("(.*)(?=px)")[0]);
                 h = Number(gameDiv.style.height.match("(.*)(?=px)")[0]);
@@ -1089,10 +1089,6 @@ cc.ContainerStrategy = cc.Class({
     _setupStyle: function (view, w, h) {
         let locCanvas = cc.game.canvas;
         let locContainer = cc.game.container;
-        if (cc.sys.os === cc.sys.OS_ANDROID) {
-            document.body.style.width = (view._isRotated ? h : w) + 'px';
-            document.body.style.height = (view._isRotated ? w : h) + 'px';
-        }
         // Setup style
         locContainer.style.width = locCanvas.style.width = w + 'px';
         locContainer.style.height = locCanvas.style.height = h + 'px';
