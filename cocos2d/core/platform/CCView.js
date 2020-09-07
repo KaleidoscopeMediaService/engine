@@ -326,7 +326,7 @@ cc.js.mixin(View.prototype, {
         var locFrameSize = this._frameSize;
         var w = __BrowserGetter.availWidth(cc.game.frame);
         var h = __BrowserGetter.availHeight(cc.game.frame);
-        var isLandscape = w >= h;
+        var isLandscape = w >= h || (Math.abs(window.orientation) === 90);
 
         if (CC_EDITOR || !cc.sys.isMobile ||
             (isLandscape && this._orientation & cc.macro.ORIENTATION_LANDSCAPE) || 
@@ -1060,6 +1060,17 @@ cc.ContainerStrategy = cc.Class({
     },
 
     _setupContainer: function (view, w, h) {
+        if(!CC_EDITOR) {
+            var gameDiv = document.getElementById("GameDiv");
+
+            if (cc.sys.isMobile && !!gameDiv) {
+                if (gameDiv.style.width.includes("px") && cc.sys.os !== cc.sys.OS_IOS) {
+                    w = Number(gameDiv.style.width.match("(.*)(?=px)")[0]);
+                    h = Number(gameDiv.style.height.match("(.*)(?=px)")[0]);
+                }
+            }
+        }
+
         var locCanvas = cc.game.canvas;
 
         this._setupStyle(view, w, h);
@@ -1080,10 +1091,6 @@ cc.ContainerStrategy = cc.Class({
     _setupStyle: function (view, w, h) {
         let locCanvas = cc.game.canvas;
         let locContainer = cc.game.container;
-        if (cc.sys.os === cc.sys.OS_ANDROID) {
-            document.body.style.width = (view._isRotated ? h : w) + 'px';
-            document.body.style.height = (view._isRotated ? w : h) + 'px';
-        }
         // Setup style
         locContainer.style.width = locCanvas.style.width = w + 'px';
         locContainer.style.height = locCanvas.style.height = h + 'px';
