@@ -1060,12 +1060,14 @@ cc.ContainerStrategy = cc.Class({
     },
 
     _setupContainer: function (view, w, h) {
-        var gameDiv = document.getElementById("GameDiv");
+        if(!CC_EDITOR) {
+            var gameDiv = document.getElementById("GameDiv");
 
-        if (!CC_EDITOR && cc.sys.isMobile) {
-            if (gameDiv.style.width.includes("px") && cc.sys.os !== cc.sys.OS_IOS) {
-                w = Number(gameDiv.style.width.match("(.*)(?=px)")[0]);
-                h = Number(gameDiv.style.height.match("(.*)(?=px)")[0]);
+            if (cc.sys.isMobile && !!gameDiv) {
+                if (gameDiv.style.width.includes("px") && cc.sys.os !== cc.sys.OS_IOS) {
+                    w = Number(gameDiv.style.width.match("(.*)(?=px)")[0]);
+                    h = Number(gameDiv.style.height.match("(.*)(?=px)")[0]);
+                }
             }
         }
 
