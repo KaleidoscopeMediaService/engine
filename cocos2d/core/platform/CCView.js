@@ -60,19 +60,29 @@ switch (__BrowserGetter.adaptationType) {
         __BrowserGetter.meta["minimal-ui"] = "true";
         __BrowserGetter.availWidth = cc.sys.isMobile ? function (frame){
             const isIphone = window.navigator.userAgent.indexOf("iPhone") > -1;
-            const isLandscape = Math.abs(window.orientation) === 90;
-            frame.style.width = (isLandscape && isIphone) ? "85vw" : "100vw";
-            // bug fix for navigation bar on Safari
-            return frame.clientWidth;
+
+            if (isIphone) {
+                const isLandscape = Math.abs(window.orientation) === 90;
+                frame.style.width = (isLandscape && isIphone) ? "85vw" : "100vw";
+                // bug fix for navigation bar on Safari
+                return frame.clientWidth;
+            }
+
+            return window.innerWidth;
         } : function (frame) {
             return frame.clientWidth;
         }
         __BrowserGetter.availHeight = cc.sys.isMobile ? function (frame){
             const isIphone = window.navigator.userAgent.indexOf("iPhone") > -1;
-            const isLandscape = Math.abs(window.orientation) === 90;
-            frame.style.height = (isLandscape && isIphone) ? "85vh" : "100vh";
-            // bug fix for navigation bar on Safari
-            return frame.clientHeight;
+
+            if (isIphone) {
+                const isLandscape = Math.abs(window.orientation) === 90;
+                frame.style.height = (isLandscape && isIphone) ? "85vh" : "100vh";
+                // bug fix for navigation bar on Safari
+                return frame.clientHeight;
+            }
+
+            return window.innerHeight;
         } : function (frame) {
             return frame.clientHeight;
         }
