@@ -70,7 +70,7 @@ switch (__BrowserGetter.adaptationType) {
         __BrowserGetter.availHeight = cc.sys.isMobile ? function (frame){
             const isIphone = window.navigator.userAgent.indexOf("iPhone") > -1;
             const isLandscape = Math.abs(window.orientation) === 90;
-            frame.style.height = (isLandscape && isIphone) ? "85vw" : "100vw";
+            frame.style.height = (isLandscape && isIphone) ? "85vh" : "100vh";
             // bug fix for navigation bar on Safari
             return frame.clientHeight;
         } : function (frame) {
