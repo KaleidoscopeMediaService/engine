@@ -26,7 +26,13 @@
 import gfx from '../../../renderer/gfx';
 
 // See: https://discuss.cocos2d-x.org/t/fix-ios14-bad-performance-on-browsers-webview-solved/51502/10, https://github.com/cocos-creator/engine/pull/7415/files
-const isIOS14Device = cc.sys.os === cc.sys.OS_IOS && cc.sys.isBrowser && cc.sys.isMobile && /iPhone OS 14/.test(window.navigator.userAgent);
+const isIOSOver14Device = (
+    cc.sys.os === cc.sys.OS_IOS
+    && cc.sys.isBrowser
+    && cc.sys.isMobile
+    && /iPhone OS [0-9]+/.test(window.navigator.userAgent)
+    && Number(window.navigator.userAgent.match(/iPhone OS ([0-9]+)/)[1]) >= 14
+);
 
 let MeshBuffer = cc.Class({
     name: 'cc.MeshBuffer',
@@ -263,7 +269,7 @@ let MeshBuffer = cc.Class({
 
 // Should not share vb and id between multiple drawcalls on iOS14, it will cost a lot of time.
 // TODO: maybe remove it after iOS14 fix it?
-if (isIOS14Device) {
+if (isIOSOver14Device) {
     MeshBuffer.prototype.checkAndSwitchBuffer = function (vertexCount) {
         if (this.vertexOffset + vertexCount > 65535) {
             this.uploadData();
