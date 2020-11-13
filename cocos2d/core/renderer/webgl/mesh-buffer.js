@@ -30,8 +30,7 @@ const isIOSOver14Device = (
     cc.sys.os === cc.sys.OS_IOS
     && cc.sys.isBrowser
     && cc.sys.isMobile
-    && /iPhone OS [0-9]+/.test(window.navigator.userAgent)
-    && Number(window.navigator.userAgent.match(/iPhone OS ([0-9]+)/)[1]) >= 14
+    && (/OS [0-9]+/.test(window.navigator.userAgent) && Number(window.navigator.userAgent.match(/OS ([0-9]+)/)[1]) >= 14)
 );
 
 let MeshBuffer = cc.Class({
