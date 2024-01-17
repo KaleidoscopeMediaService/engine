@@ -235,9 +235,6 @@ function getTypeChecker (type, attrName) {
                         return;
                     }
                 }
-                else if (type !== 'Number') {
-                    cc.warnID(3606, attrName, propInfo, type);
-                }
             }
         }
         else if (defaultType !== 'function') {
