@@ -218,10 +218,7 @@ function genProperty (ctor, properties, propName, options, desc, cache) {
                 cc.warnID(3653, propName, js.getClassName(ctor));
                 // prop.default = options.default;
             }
-            else if (!isDefaultValueSpecified) {
-                cc.warnID(3654, js.getClassName(ctor), propName);
-                // prop.default = fullOptions.hasOwnProperty('default') ? fullOptions.default : undefined;
-            }
+
             if (cc.RawAsset.wasRawAssetType(prop.url) &&
                 prop._short &&
                 isDefaultValueSpecified &&
