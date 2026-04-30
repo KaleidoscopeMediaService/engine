@@ -70,20 +70,31 @@ const State = cc.Enum({
 
 /**
  * !#en
- * Button has 4 Transition types<br/>
- * When Button state changed:<br/>
- *  If Transition type is Button.Transition.NONE, Button will do nothing<br/>
- *  If Transition type is Button.Transition.COLOR, Button will change target's color<br/>
- *  If Transition type is Button.Transition.SPRITE, Button will change target Sprite's sprite<br/>
- *  If Transition type is Button.Transition.SCALE, Button will change target node's scale<br/>
+ * Button component. Can be pressed or clicked. Button has 4 Transition types:
+ * 
+ *   - Button.Transition.NONE   // Button will do nothing
+ *   - Button.Transition.COLOR  // Button will change target's color
+ *   - Button.Transition.SPRITE // Button will change target Sprite's sprite
+ *   - Button.Transition.SCALE // Button will change target node's scale
  *
- * Button will trigger 5 events:<br/>
- *  Button.EVENT_TOUCH_DOWN<br/>
- *  Button.EVENT_TOUCH_UP<br/>
- *  Button.EVENT_HOVER_IN<br/>
- *  Button.EVENT_HOVER_MOVE<br/>
- *  Button.EVENT_HOVER_OUT<br/>
- *  User can get the current clicked node with 'event.target' from event object which is passed as parameter in the callback function of click event.
+ * The button can bind events (but you must be on the button's node to bind events).<br/>
+ * The following events can be triggered on all platforms.
+ * 
+ *  - cc.Node.EventType.TOUCH_START  // Press
+ *  - cc.Node.EventType.TOUCH_MOVE   // After pressing and moving
+ *  - cc.Node.EventType.TOUCH_END    // After pressing and releasing
+ *  - cc.Node.EventType.TOUCH_CANCEL // Press to cancel
+ * 
+ * The following events are only triggered on the PC platform:
+ *
+ *   - cc.Node.EventType.MOUSE_DOWN
+ *   - cc.Node.EventType.MOUSE_MOVE
+ *   - cc.Node.EventType.MOUSE_ENTER
+ *   - cc.Node.EventType.MOUSE_LEAVE
+ *   - cc.Node.EventType.MOUSE_UP
+ *   - cc.Node.EventType.MOUSE_WHEEL
+ *
+ * User can get the current clicked node with 'event.target' from event object which is passed as parameter in the callback function of click event.
  *
  * !#zh
  * 按钮组件。可以被按下，或者点击。
@@ -99,7 +110,7 @@ const State = cc.Enum({
  * 以下事件可以在全平台上都触发：
  * 
  *   - cc.Node.EventType.TOUCH_START  // 按下时事件
- *   - cc.Node.EventType.TOUCH_Move   // 按住移动后事件
+ *   - cc.Node.EventType.TOUCH_MOVE   // 按住移动后事件
  *   - cc.Node.EventType.TOUCH_END    // 按下后松开后事件
  *   - cc.Node.EventType.TOUCH_CANCEL // 按下取消事件
  * 
@@ -115,6 +126,7 @@ const State = cc.Enum({
  * 用户可以通过获取 __点击事件__ 回调函数的参数 event 的 target 属性获取当前点击对象。
  * @class Button
  * @extends Component
+ * @uses GraySpriteState
  * @example
  *
  * // Add an event to the button.
@@ -200,7 +212,7 @@ let Button = cc.Class({
             default: false,
             tooltip: CC_DEV && 'i18n:COMPONENT.button.auto_gray_effect',
             notify () {
-                this._updateDisabledState();
+                this._updateDisabledState(true);
             }
         },
 
@@ -229,7 +241,7 @@ let Button = cc.Class({
          * @property {Color} normalColor
          */
         normalColor: {
-            default: cc.color(214, 214, 214),
+            default: cc.Color.WHITE,
             displayName: 'Normal',
             tooltip: CC_DEV && 'i18n:COMPONENT.button.normal_color',
             notify () {
@@ -423,7 +435,7 @@ let Button = cc.Class({
 
     __preload () {
         this._applyTarget();
-        this._updateState();
+        this._resetState();
     },
 
     _resetState () {
@@ -461,6 +473,8 @@ let Button = cc.Class({
         if (!CC_EDITOR) {
             this._registerNodeEvent();
         }
+
+        this._updateState();
     },
 
     onDisable () {
@@ -500,8 +514,10 @@ let Button = cc.Class({
 
     _setTargetColor (color) {
         let target = this._getTarget();
-        target.color = color;
-        target.opacity = color.a;
+        let cloneColor = color.clone();
+        target.opacity = cloneColor.a;
+        cloneColor.a = 255;  // don't set node opacity via node.color.a
+        target.color = cloneColor;
     },
 
     _getStateColor (state) {
@@ -756,13 +772,14 @@ let Button = cc.Class({
     _updateColorTransitionImmediately (state) {
         let color = this._getStateColor(state);
         this._setTargetColor(color);
+        this._fromColor = color.clone();
+        this._toColor = color;
     },
 
     _updateColorTransition (state) {
         if (CC_EDITOR || state === State.DISABLED) {
             this._updateColorTransitionImmediately(state);
-        }
-        else {
+        } else {
             let target = this._getTarget();
             let color = this._getStateColor(state);
             this._fromColor = target.color.clone();
@@ -842,18 +859,15 @@ let Button = cc.Class({
         this.node.setContentSize(this._getTarget().getContentSize());
     },
 
-    _updateDisabledState () {
-        if (this._sprite) {
+    _updateDisabledState (force) {
+        if (!this._sprite) return;
+
+        if (this.enableAutoGrayEffect || force) {
             let useGrayMaterial = false;
 
-            if (this.enableAutoGrayEffect) {
-                if (!(this.transition === Transition.SPRITE && this.disabledSprite)) {
-                    if (!this.interactable) {
-                        useGrayMaterial = true;
-                    }
-                }
+            if (!(this.transition === Transition.SPRITE && this.disabledSprite)) {
+                useGrayMaterial = this.enableAutoGrayEffect && !this.interactable;
             }
-
             this._switchGrayMaterial(useGrayMaterial, this._sprite);
         }
     }

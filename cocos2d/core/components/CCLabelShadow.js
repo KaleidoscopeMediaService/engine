@@ -63,10 +63,12 @@ let LabelShadow = cc.Class({
         color: {
             tooltip: CC_DEV && 'i18n:COMPONENT.shadow.color',
             get: function () {
-                return this._color;
+                return this._color.clone();
             },
             set: function (value) {
-                this._color = value;
+                if (!this._color.equals(value)) {
+                    this._color.set(value);
+                }
                 this._updateRenderData();
             }
         },
@@ -122,7 +124,7 @@ let LabelShadow = cc.Class({
     _updateRenderData () {
         let label = this.node.getComponent(cc.Label);
         if (label) {
-            label._updateRenderData();
+            label.setVertsDirty();
         }
     }
 

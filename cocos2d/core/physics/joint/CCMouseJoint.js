@@ -38,7 +38,7 @@ var tempB2Vec2 = new b2.Vec2();
  * Note : generally mouse joint only used in test bed.
  * !#zh
  * 鼠标关节用于使刚体上的一个点追踪一个指定的世界坐标系下的位置。
- * 鼠标关节可以指定一个最大的里来施加一个柔和的约束。
+ * 鼠标关节可以指定一个最大的力来施加一个柔和的约束。
  * 鼠标关节会自动使用 mouse region 节点来注册鼠标事件，并且在触摸移动事件中移动选中的刚体。
  * 注意：一般鼠标关节只在测试环境中使用。
  * @class MouseJoint
@@ -225,7 +225,7 @@ var MouseJoint = cc.Class({
         var target = this._pressPoint = event.touch.getLocation();
         
         if (cc.Camera && cc.Camera.main) {
-            target = cc.Camera.main.getCameraToWorldPoint(target);
+            target = cc.Camera.main.getScreenToWorldPoint(target);
         }
 
         var collider = manager.testPoint( target );
@@ -267,7 +267,7 @@ var MouseJoint = cc.Class({
 
         var camera = cc.Camera.findCamera(this.node);
         if (camera) {
-            this.target = camera.getCameraToWorldPoint(this._pressPoint);
+            this.target = camera.getScreenToWorldPoint(this._pressPoint);
         }
         else {
             this.target = this._pressPoint;

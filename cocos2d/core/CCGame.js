@@ -28,7 +28,6 @@ var EventTarget = require('./event/event-target');
 require('../audio/CCAudioEngine');
 const debug = require('./CCDebug');
 const renderer = require('./renderer/index.js');
-const inputManager = CC_QQPLAY ? require('./platform/BKInputManager') : require('./platform/CCInputManager');
 const dynamicAtlasManager = require('../core/renderer/utils/dynamic-atlas/manager');
 
 /**
@@ -90,7 +89,7 @@ var game = {
     EVENT_GAME_INITED: "game_inited",
 
     /**
-     * Event triggered after engine inited, at this point you will be able to use all engine classes. 
+     * Event triggered after engine inited, at this point you will be able to use all engine classes.
      * It was defined as EVENT_RENDERER_INITED in cocos creator v1.x and renamed in v2.0
      * @property EVENT_ENGINE_INITED
      * @constant
@@ -137,9 +136,6 @@ var game = {
 
     _lastTime: null,
     _frameTime: null,
-
-    // Scenes list
-    _sceneInfos: [],
 
     /**
      * !#en The outer frame of the game canvas, parent of game container.
@@ -196,8 +192,6 @@ var game = {
      *      0 - Automatically chosen by engine<br/>
      *      1 - Forced to use canvas renderer<br/>
      *      2 - Forced to use WebGL renderer, but this will be ignored on mobile browsers<br/>
-     * 7. scenes<br/>
-     *      "scenes" include available scenes in the current bundle.<br/>
      *<br/>
      * Please DO NOT modify this object directly, it won't have any effect.<br/>
      * !#zh
@@ -224,8 +218,6 @@ var game = {
      *          0 - 通过引擎自动选择。                                                     <br/>
      *          1 - 强制使用 canvas 渲染。
      *          2 - 强制使用 WebGL 渲染，但是在部分 Android 浏览器中这个选项会被忽略。     <br/>
-     * 7. scenes                                                                         <br/>
-     *      “scenes” 当前包中可用场景。                                                   <br/>
      * <br/>
      * 注意：请不要直接修改这个对象，它不会有任何效果。
      * @property config
@@ -294,8 +286,6 @@ var game = {
         if (cc.audioEngine) {
             cc.audioEngine._break();
         }
-        // Pause animation
-        cc.director.stopAnimation();
         // Pause main loop
         if (this._intervalId)
             window.cancelAnimFrame(this._intervalId);
@@ -315,8 +305,7 @@ var game = {
         if (cc.audioEngine) {
             cc.audioEngine._restore();
         }
-        // Resume animation
-        cc.director.startAnimation();
+        cc.director._resetDeltaTime();
         // Resume main loop
         this._runMainLoop();
     },
@@ -354,7 +343,7 @@ var game = {
             cc.director.reset();
 
             game.pause();
-            cc.AssetLibrary._loadBuiltins(() => {
+            cc.assetManager.builtins.init(() => {
                 game.onStart();
                 game.emit(game.EVENT_RESTART);
             });
@@ -386,21 +375,23 @@ var game = {
         this.emit(this.EVENT_ENGINE_INITED);
     },
 
-    _prepareFinished (cb) {
-
-        if (CC_PREVIEW && window.__modular) {
-            window.__modular.run();
+    _loadPreviewScript (cb) {
+        if (CC_PREVIEW && window.__quick_compile_project__) {
+            window.__quick_compile_project__.load(cb);
         }
+        else {
+            cb();
+        }
+    },
 
-        this._prepared = true;
-
+    _prepareFinished (cb) {
         // Init engine
         this._initEngine();
-        cc.AssetLibrary._loadBuiltins(() => {
+        this._setAnimFrame();
+        cc.assetManager.builtins.init(() => {
             // Log engine version
             console.log('Cocos Creator v' + cc.ENGINE_VERSION);
-
-            this._setAnimFrame();
+            this._prepared = true;
             this._runMainLoop();
 
             this.emit(this.EVENT_GAME_INITED);
@@ -433,14 +424,14 @@ var game = {
      * @typescript
      * on<T extends Function>(type: string, callback: T, target?: any, useCapture?: boolean): T
      */
-    on (type, callback, target) {
+    on (type, callback, target, once) {
         // Make sure EVENT_ENGINE_INITED and EVENT_GAME_INITED callbacks to be invoked
         if ((this._prepared && type === this.EVENT_ENGINE_INITED) ||
             (!this._paused && type === this.EVENT_GAME_INITED)) {
             callback.call(target);
         }
         else {
-            this.eventTargetOn(type, callback, target);
+            this.eventTargetOn(type, callback, target, once);
         }
     },
     /**
@@ -485,18 +476,9 @@ var game = {
             return;
         }
 
-        // Load game scripts
-        let jsList = this.config.jsList;
-        if (jsList && jsList.length > 0) {
-            var self = this;
-            cc.loader.load(jsList, function (err) {
-                if (err) throw new Error(JSON.stringify(err));
-                self._prepareFinished(cb);
-            });
-        }
-        else {
+        this._loadPreviewScript(() => {
             this._prepareFinished(cb);
-        }
+        });
     },
 
     /**
@@ -546,6 +528,7 @@ var game = {
             }
             this._persistRootNodes[id] = node;
             node._persistNode = true;
+            cc.assetManager._releaseManager._addPersistNodeRef(node);
         }
     },
 
@@ -560,6 +543,7 @@ var game = {
         if (node === this._persistRootNodes[id]) {
             delete this._persistRootNodes[id];
             node._persistNode = false;
+            cc.assetManager._releaseManager._removePersistNodeRef(node);
         }
     },
 
@@ -581,24 +565,26 @@ var game = {
         this._lastTime = performance.now();
         var frameRate = game.config.frameRate;
         this._frameTime = 1000 / frameRate;
-
+        cc.director._maxParticleDeltaTime = this._frameTime / 1000 * 2;
         if (CC_JSB || CC_RUNTIME) {
             jsb.setPreferredFramesPerSecond(frameRate);
             window.requestAnimFrame = window.requestAnimationFrame;
             window.cancelAnimFrame = window.cancelAnimationFrame;
         }
         else {
+            let rAF = window.requestAnimationFrame = window.requestAnimationFrame ||
+            window.webkitRequestAnimationFrame ||
+            window.mozRequestAnimationFrame ||
+            window.oRequestAnimationFrame ||
+            window.msRequestAnimationFrame;
+
             if (frameRate !== 60 && frameRate !== 30) {
-                window.requestAnimFrame = this._stTime;
+                window.requestAnimFrame = rAF ? this._stTimeWithRAF : this._stTime;
                 window.cancelAnimFrame = this._ctTime;
             }
             else {
-                window.requestAnimFrame = window.requestAnimationFrame ||
-                window.webkitRequestAnimationFrame ||
-                window.mozRequestAnimationFrame ||
-                window.oRequestAnimationFrame ||
-                window.msRequestAnimationFrame ||
-                this._stTime;
+                window.requestAnimFrame = rAF || this._stTime;
+
                 window.cancelAnimFrame = window.cancelAnimationFrame ||
                 window.cancelRequestAnimationFrame ||
                 window.msCancelRequestAnimationFrame ||
@@ -613,6 +599,17 @@ var game = {
             }
         }
     },
+
+    _stTimeWithRAF: function(callback){
+        var currTime = performance.now();
+        var timeToCall = Math.max(0, game._frameTime - (currTime - game._lastTime));
+        var id = window.setTimeout(function() {
+                window.requestAnimationFrame(callback);
+            }, timeToCall);
+        game._lastTime = currTime + timeToCall;
+        return id;
+    },
+
     _stTime: function(callback){
         var currTime = performance.now();
         var timeToCall = Math.max(0, game._frameTime - (currTime - game._lastTime));
@@ -626,6 +623,11 @@ var game = {
     },
     //Run game.
     _runMainLoop: function () {
+        if (CC_EDITOR) {
+            return;
+        }
+        if (!this._prepared) return;
+
         var self = this, callback, config = self.config,
             director = cc.director,
             skip = true, frameRate = config.frameRate;
@@ -665,10 +667,12 @@ var game = {
         if (typeof config.registerSystemEvent !== 'boolean') {
             config.registerSystemEvent = true;
         }
-        config.showFPS = !!config.showFPS;
-
-        // Scene parser
-        this._sceneInfos = config.scenes || [];
+        if (renderMode === 1) {
+            config.showFPS = false;
+        }
+        else {
+            config.showFPS = !!config.showFPS;
+        }
 
         // Collide Map and Group List
         this.collisionMatrix = config.collisionMatrix || [];
@@ -683,11 +687,11 @@ var game = {
     _determineRenderType () {
         let config = this.config,
             userRenderMode = parseInt(config.renderMode) || 0;
-    
+
         // Determine RenderType
         this.renderType = this.RENDER_TYPE_CANVAS;
         let supportRender = false;
-    
+
         if (userRenderMode === 0) {
             if (cc.sys.capabilities['opengl']) {
                 this.renderType = this.RENDER_TYPE_WEBGL;
@@ -706,7 +710,7 @@ var game = {
             this.renderType = this.RENDER_TYPE_WEBGL;
             supportRender = true;
         }
-    
+
         if (!supportRender) {
             throw new Error(debug.getError(3820, userRenderMode));
         }
@@ -720,24 +724,11 @@ var game = {
             width, height,
             localCanvas, localContainer;
 
-        if (CC_WECHATGAME || CC_JSB || CC_RUNTIME) {
+        if (CC_JSB || CC_RUNTIME) {
             this.container = localContainer = document.createElement("DIV");
             this.frame = localContainer.parentNode === document.body ? document.documentElement : localContainer.parentNode;
-            if (cc.sys.browserType === cc.sys.BROWSER_TYPE_WECHAT_GAME_SUB) {
-                localCanvas = window.sharedCanvas || wx.getSharedCanvas();
-            }
-            else if (CC_JSB || CC_RUNTIME) {
-                localCanvas = window.__canvas;
-            }
-            else {
-                localCanvas = canvas;
-            }
+            localCanvas = window.__canvas;
             this.canvas = localCanvas;
-        }
-        else if (CC_QQPLAY) {
-            this.container = document.createElement("DIV");
-            this.frame = document.documentElement;
-            this.canvas = localCanvas = canvas;
         }
         else {
             var element = (el instanceof HTMLElement) ? el : (document.querySelector(el) || document.querySelector('#' + el));
@@ -790,12 +781,9 @@ var game = {
                 'antialias': cc.macro.ENABLE_WEBGL_ANTIALIAS,
                 'alpha': cc.macro.ENABLE_TRANSPARENT_CANVAS
             };
-            if (CC_QQPLAY) {
-                opts['preserveDrawingBuffer'] = true;
-            }
             renderer.initWebGL(localCanvas, opts);
             this._renderContext = renderer.device._gl;
-            
+
             // Enable dynamic atlas manager by default
             if (!cc.macro.CLEANUP_IMAGE_CACHE && dynamicAtlasManager) {
                 dynamicAtlasManager.enabled = true;
@@ -820,7 +808,7 @@ var game = {
 
         // register system events
         if (this.config.registerSystemEvent)
-            inputManager.registerSystemEvent(this.canvas);
+            cc.internal.inputManager.registerSystemEvent(this.canvas);
 
         if (typeof document.hidden !== 'undefined') {
             hiddenPropName = "hidden";
@@ -874,11 +862,6 @@ var game = {
 
         if (navigator.userAgent.indexOf("MicroMessenger") > -1) {
             win.onfocus = onShown;
-        }
-
-        if (CC_WECHATGAME && cc.sys.browserType !== cc.sys.BROWSER_TYPE_WECHAT_GAME_SUB) {
-            wx.onShow && wx.onShow(onShown);
-            wx.onHide && wx.onHide(onHidden);
         }
 
         if ("onpageshow" in window && "onpagehide" in window) {

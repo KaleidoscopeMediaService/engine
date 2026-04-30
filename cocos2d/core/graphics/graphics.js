@@ -44,11 +44,11 @@ let Graphics = cc.Class({
     },
 
     ctor () {
-        this._impl = Graphics._assembler.createImpl(this);
+        this._impl = new Graphics._Impl(this);
     },
 
     properties: {
-        _lineWidth: 1,
+        _lineWidth: 2,
         _strokeColor: cc.Color.BLACK,
         _lineJoin: LineJoin.MITER,
         _lineCap: LineCap.BUTT,
@@ -171,38 +171,29 @@ let Graphics = cc.Class({
 
     onRestore () {
         if (!this._impl) {
-            this._impl = Graphics._assembler.createImpl();
+            this._impl = new Graphics._Impl(this);
         }
-    },
-
-    onEnable () {
-        this._super();
-        this._activateMaterial();
     },
 
     onDestroy () {
+        this.clear(true);
         this._super();
-        this._impl.clear(this, true);
         this._impl = null;
     },
 
-    _activateMaterial () {
-        // Ignore material in canvas
-        if (cc.game.renderType === cc.game.RENDER_TYPE_CANVAS) {
-            this.disableRender();
-            return;
-        }
-        
-        this.node._renderFlag &= ~cc.RenderFlow.FLAG_RENDER;
-        this.node._renderFlag |= cc.RenderFlow.FLAG_CUSTOM_IA_RENDER;
+    _getDefaultMaterial () {
+        return Material.getBuiltinMaterial('2d-graphics');
+    },
 
-        if (this.sharedMaterials[0]) {
-            return;
+    _updateMaterial () {
+        let material = this._materials[0];
+        if (!material) return;
+        if (material.getDefine('CC_USE_MODEL') !== undefined) {
+            material.define('CC_USE_MODEL', true);
         }
-        
-        let material = Material.getInstantiatedBuiltinMaterial('2d-base', this);
-        material.define('_USE_MODEL', true);
-        this.setMaterial(0, material);
+        if (material.getDefine('CC_SUPPORT_standard_derivatives') !== undefined && cc.sys.glExtension('OES_standard_derivatives')) {
+            material.define('CC_SUPPORT_standard_derivatives', true);
+        }
     },
 
     /**
@@ -351,7 +342,10 @@ let Graphics = cc.Class({
      * @param {Boolean} [clean] Whether to clean the graphics inner cache.
      */
     clear (clean) {
-        this._impl.clear(this, clean);
+        this._impl.clear(clean);
+        if (this._assembler) {
+            this._assembler.clear(clean);
+        }
     },
 
     /**
@@ -369,7 +363,10 @@ let Graphics = cc.Class({
      * @method stroke
      */
     stroke () {
-        Graphics._assembler.stroke(this);
+        if (!this._assembler) {
+            this._resetAssembler();
+        }
+        this._assembler.stroke(this);
     },
 
     /**
@@ -378,8 +375,13 @@ let Graphics = cc.Class({
      * @method fill
      */
     fill () {
-        Graphics._assembler.fill(this);
+        if (!this._assembler) {
+            this._resetAssembler();
+        }
+        this._assembler.fill(this);
     }
 });
 
 cc.Graphics = module.exports = Graphics;
+cc.Graphics.Types = Types;
+cc.Graphics.Helper = require('./helper');

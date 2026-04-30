@@ -86,7 +86,7 @@ function quickFindIndex (ratios, ratio) {
     if (ratio < start) return 0;
 
     var end = ratios[length];
-    if (ratio > end) return length;
+    if (ratio > end) return ~ratios.length;
 
     ratio = (ratio - start) / (end - start);
 
@@ -114,6 +114,11 @@ function quickFindIndex (ratios, ratio) {
 var DynamicAnimCurve = cc.Class({
     name: 'cc.DynamicAnimCurve',
     extends: AnimCurve,
+
+    ctor () {
+        // cache last frame index
+        this._cachedIndex = 0;
+    },
 
     properties: {
 
@@ -163,7 +168,14 @@ var DynamicAnimCurve = cc.Class({
         };
     })(),
 
-    _lerpVector: (function () {
+    _lerpVector2: (function () {
+        let out = cc.v2();
+        return function (from, to, t) {
+            return from.lerp(to, t, out);
+        };
+    })(),
+
+    _lerpVector3: (function () {
         let out = cc.v3();
         return function (from, to, t) {
             return from.lerp(to, t, out);
@@ -171,18 +183,35 @@ var DynamicAnimCurve = cc.Class({
     })(),
 
     sample (time, ratio, state) {
-        var values = this.values;
-        var ratios = this.ratios;
-        var frameCount = ratios.length;
+        let values = this.values;
+        let ratios = this.ratios;
+        let frameCount = ratios.length;
 
         if (frameCount === 0) {
             return;
         }
 
-        // evaluate value
-        var value;
-        var index = this._findFrameIndex(ratios, ratio);
+        // only need to refind frame index when ratio is out of range of last from ratio and to ratio.
+        let shoudRefind = true;
+        let cachedIndex = this._cachedIndex;
+        if (cachedIndex < 0) {
+            cachedIndex = ~cachedIndex;
+            if (cachedIndex > 0 && cachedIndex < ratios.length) {
+                let fromRatio = ratios[cachedIndex - 1];
+                let toRatio = ratios[cachedIndex];
+                if (ratio > fromRatio && ratio < toRatio) {
+                    shoudRefind = false;
+                }
+            }
+        }
 
+        if (shoudRefind) {
+            this._cachedIndex = this._findFrameIndex(ratios, ratio);
+        }
+
+        // evaluate value
+        let value;
+        let index = this._cachedIndex;
         if (index < 0) {
             index = ~index;
 

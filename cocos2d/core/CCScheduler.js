@@ -346,9 +346,9 @@ cc.Scheduler.prototype = {
 
     //-----------------------public method-------------------------
     /**
-     * !en This method should be called for any target which needs to schedule tasks, and this method should be called before any scheduler API usage.
+     * !#en This method should be called for any target which needs to schedule tasks, and this method should be called before any scheduler API usage.
      * This method will add a `_id` property if it doesn't exist.
-     * !zh 任何需要用 Scheduler 管理任务的对象主体都应该调用这个方法，并且应该在调用任何 Scheduler API 之前调用这个方法。
+     * !#zh 任何需要用 Scheduler 管理任务的对象主体都应该调用这个方法，并且应该在调用任何 Scheduler API 之前调用这个方法。
      * 这个方法会给对象添加一个 `_id` 属性，如果这个属性不存在的话。
      * @method enableForTarget
      * @param {Object} target
@@ -488,7 +488,7 @@ cc.Scheduler.prototype = {
      *   If 'interval' is 0, it will be called every frame, but if so, it recommended to use 'scheduleUpdateForTarget:' instead.<br/>
      *   If the callback function is already scheduled, then only the interval parameter will be updated without re-scheduling it again.<br/>
      *   repeat let the action be repeated repeat + 1 times, use cc.macro.REPEAT_FOREVER to let the action run continuously<br/>
-     *   delay is the amount of time the action will wait before it'll start<br/>
+     *   delay is the amount of time the action will wait before it'll start. Unit: s.<br/>
      * </p>
      * !#zh
      * 指定回调函数，调用对象等信息来添加一个新的定时器。<br/>
@@ -499,7 +499,7 @@ cc.Scheduler.prototype = {
      * 如果回调函数已经被定时器使用，那么只会更新之前定时器的时间间隔参数，不会设置新的定时器。<br/>
      * repeat 值可以让定时器触发 repeat + 1 次，使用 cc.macro.REPEAT_FOREVER
      * 可以让定时器一直循环触发。<br/>
-     * delay 值指定延迟时间，定时器会在延迟指定的时间之后开始计时。
+     * delay 值指定延迟时间，定时器会在延迟指定的时间之后开始计时，单位: 秒。
      * @method schedule
      * @param {Function} callback
      * @param {Object} target
@@ -776,7 +776,7 @@ cc.Scheduler.prototype = {
      * You should NEVER call this method, unless you know what you are doing.
      * !#zh
      * 取消所有对象的所有定时器，包括系统定时器。<br/>
-     * 不用调用此函数，除非你确定你在做什么。
+     * 不要调用此函数，除非你确定你在做什么。
      * @method unscheduleAll
      */
     unscheduleAll: function(){

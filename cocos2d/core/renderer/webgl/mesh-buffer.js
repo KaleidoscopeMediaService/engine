@@ -25,15 +25,25 @@
 
 import gfx from '../../../renderer/gfx';
 
+let FIX_IOS14_BUFFER;
+if (cc.sys.platform === cc.sys.WECHAT_GAME) {
+    FIX_IOS14_BUFFER = (cc.sys.os === cc.sys.OS_IOS || cc.sys.os === cc.sys.OS_OSX) && GameGlobal?.isIOSHighPerformanceMode && /(OS 1[4-9])|(Version\/1[4-9])/.test(window.navigator.userAgent);
+} else {
+    FIX_IOS14_BUFFER = (cc.sys.os === cc.sys.OS_IOS || cc.sys.os === cc.sys.OS_OSX) && cc.sys.isBrowser && /(OS 1[4-9])|(Version\/1[4-9])/.test(window.navigator.userAgent);
+}
 let MeshBuffer = cc.Class({
     name: 'cc.MeshBuffer',
     ctor (batcher, vertexFormat) {
-        this.byteStart = 0;
+        this.init (batcher, vertexFormat);
+    },
+
+    init (batcher, vertexFormat) {
         this.byteOffset = 0;
-        this.indiceStart = 0;
         this.indiceOffset = 0;
-        this.vertexStart = 0;
         this.vertexOffset = 0;
+        this.indiceStart = 0;
+
+        this._dirty = false;
 
         this._vertexFormat = vertexFormat;
         this._vertexBytes = this._vertexFormat._bytes;
@@ -97,12 +107,10 @@ let MeshBuffer = cc.Class({
     switchBuffer () {
         let offset = ++this._arrOffset;
 
-        this.byteStart = 0;
         this.byteOffset = 0;
-        this.vertexStart = 0;
         this.vertexOffset = 0;
-        this.indiceStart = 0;
         this.indiceOffset = 0;
+        this.indiceStart = 0;
 
         if (offset < this._vbArr.length) {
             this._vb = this._vbArr[offset];
@@ -117,7 +125,6 @@ let MeshBuffer = cc.Class({
                 0
             );
             this._vbArr[offset] = this._vb;
-            this._vb._bytes = this._vData.byteLength;
 
             this._ib = new gfx.IndexBuffer(
                 this._batcher._device,
@@ -127,7 +134,6 @@ let MeshBuffer = cc.Class({
                 0
             );
             this._ibArr[offset] = this._ib;
-            this._ib._bytes = this._iData.byteLength;
         }
     },
 
@@ -159,7 +165,10 @@ let MeshBuffer = cc.Class({
 
             this._reallocBuffer();
         }
+        this._updateOffset(vertexCount, indiceCount, byteOffset);
+    },
 
+    _updateOffset (vertexCount, indiceCount, byteOffset) {
         let offsetInfo = this._offsetInfo;
         offsetInfo.vertexOffset = this.vertexOffset;
         this.vertexOffset += vertexCount;
@@ -204,8 +213,6 @@ let MeshBuffer = cc.Class({
                 newData[i] = oldVData[i];
             }
         }
-
-        this._vb._bytes = this._vData.byteLength;
     },
 
     _reallocIData (copyOldData) {
@@ -219,8 +226,6 @@ let MeshBuffer = cc.Class({
                 iData[i] = oldIData[i];
             }
         }
-
-        this._ib._bytes = this._iData.byteLength;
     },
 
     reset () {
@@ -228,12 +233,10 @@ let MeshBuffer = cc.Class({
         this._vb = this._vbArr[0];
         this._ib = this._ibArr[0];
 
-        this.byteStart = 0;
         this.byteOffset = 0;
-        this.indiceStart = 0;
         this.indiceOffset = 0;
-        this.vertexStart = 0;
         this.vertexOffset = 0;
+        this.indiceStart = 0;
 
         this._dirty = false;
     },
@@ -254,7 +257,26 @@ let MeshBuffer = cc.Class({
 
         this._ib = null;
         this._vb = null;
+    },
+
+    forwardIndiceStartToOffset () {
+        this.indiceStart = this.indiceOffset;
     }
 });
+
+// Should not share vb and id between multiple drawcalls on iOS14, it will cost a lot of time.
+// TODO: maybe remove it after iOS14 fix it?
+if (FIX_IOS14_BUFFER) {
+    MeshBuffer.prototype.checkAndSwitchBuffer = function (vertexCount) {
+        if (this.vertexOffset + vertexCount > 65535) {
+            this.uploadData();
+            this._batcher._flush();
+        }
+    };     
+    MeshBuffer.prototype.forwardIndiceStartToOffset = function () {
+        this.uploadData();
+        this.switchBuffer();
+    }  
+}
 
 cc.MeshBuffer = module.exports = MeshBuffer;

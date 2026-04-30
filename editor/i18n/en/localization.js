@@ -1,33 +1,33 @@
 module.exports = {
     'COMPONENT': {
         "help_url": {
-            "audiosource": "https://docs.cocos.com/creator/manual/en/components/audiosource.html",
-            "animation": "https://docs.cocos.com/creator/manual/en/components/animation.html",
-            "sprite": "https://docs.cocos.com/creator/manual/en/components/sprite.html",
-            "label": "https://docs.cocos.com/creator/manual/en/components/label.html",
-            "canvas": "https://docs.cocos.com/creator/manual/en/components/canvas.html",
-            "spine": "https://docs.cocos.com/creator/manual/en/components/spine.html",
-            "widget": "https://docs.cocos.com/creator/manual/en/components/widget.html",
-            "button": "https://docs.cocos.com/creator/manual/en/components/button.html",
-            "progressbar": "https://docs.cocos.com/creator/manual/en/components/progress.html",
-            "mask": "https://docs.cocos.com/creator/manual/en/components/mask.html",
-            "scrollview": "https://docs.cocos.com/creator/manual/en/components/scrollview.html",
-            "scrollbar": "https://docs.cocos.com/creator/manual/en/components/scrollbar.html",
-            "layout": "https://docs.cocos.com/creator/manual/en/components/layout.html",
-            "tiledmap": "https://docs.cocos.com/creator/manual/en/components/tiledmap.html",
-            "editbox": "https://docs.cocos.com/creator/manual/en/components/editbox.html",
-            "videoplayer": "https://docs.cocos.com/creator/manual/en/components/videoplayer.html",
-            "motionStreak": "https://docs.cocos.com/creator/manual/en/components/motion-streak.html",
-            "richtext": "https://docs.cocos.com/creator/manual/en/components/richtext.html",
-            "pageview": "https://docs.cocos.com/creator/manual/en/components/pageview.html",
-            "pageviewIndicator": "https://docs.cocos.com/creator/manual/en/components/pageviewindicator.html",
-            "toggle": "https://docs.cocos.com/creator/manual/en/components/toggle.html",
-            "toggleGroup": "https://docs.cocos.com/creator/manual/en/components/toggleGroup.html",
-            "toggleContainer": "https://docs.cocos.com/creator/manual/en/components/toggleContainer.html",
-            "slider": "https://docs.cocos.com/creator/manual/en/components/slider.html",
-            "block_input_events": "https://docs.cocos.com/creator/manual/en/components/block-input-events.html",
-            "wx_subcontext_view": "https://docs.cocos.com/creator/manual/en/publish/publish-wechatgame-sub-domain.html",
-            "swan_subcontext_view": "https://docs.cocos.com/creator/manual/en/publish/publish-baidugame-sub-domain.html"
+            "audiosource": "https://docs.cocos.com/creator/2.4/manual/en/components/audiosource.html",
+            "animation": "https://docs.cocos.com/creator/2.4/manual/en/components/animation.html",
+            "sprite": "https://docs.cocos.com/creator/2.4/manual/en/components/sprite.html",
+            "label": "https://docs.cocos.com/creator/2.4/manual/en/components/label.html",
+            "canvas": "https://docs.cocos.com/creator/2.4/manual/en/components/canvas.html",
+            "spine": "https://docs.cocos.com/creator/2.4/manual/en/components/spine.html",
+            "widget": "https://docs.cocos.com/creator/2.4/manual/en/components/widget.html",
+            "button": "https://docs.cocos.com/creator/2.4/manual/en/components/button.html",
+            "progressbar": "https://docs.cocos.com/creator/2.4/manual/en/components/progress.html",
+            "mask": "https://docs.cocos.com/creator/2.4/manual/en/components/mask.html",
+            "scrollview": "https://docs.cocos.com/creator/2.4/manual/en/components/scrollview.html",
+            "scrollbar": "https://docs.cocos.com/creator/2.4/manual/en/components/scrollbar.html",
+            "layout": "https://docs.cocos.com/creator/2.4/manual/en/components/layout.html",
+            "tiledmap": "https://docs.cocos.com/creator/2.4/manual/en/components/tiledmap.html",
+            "editbox": "https://docs.cocos.com/creator/2.4/manual/en/components/editbox.html",
+            "videoplayer": "https://docs.cocos.com/creator/2.4/manual/en/components/videoplayer.html",
+            "motionStreak": "https://docs.cocos.com/creator/2.4/manual/en/components/motion-streak.html",
+            "richtext": "https://docs.cocos.com/creator/2.4/manual/en/components/richtext.html",
+            "pageview": "https://docs.cocos.com/creator/2.4/manual/en/components/pageview.html",
+            "pageviewIndicator": "https://docs.cocos.com/creator/2.4/manual/en/components/pageviewindicator.html",
+            "toggle": "https://docs.cocos.com/creator/2.4/manual/en/components/toggle.html",
+            "toggleGroup": "https://docs.cocos.com/creator/2.4/manual/en/components/toggleGroup.html",
+            "toggleContainer": "https://docs.cocos.com/creator/2.4/manual/en/components/toggleContainer.html",
+            "slider": "https://docs.cocos.com/creator/2.4/manual/en/components/slider.html",
+            "block_input_events": "https://docs.cocos.com/creator/2.4/manual/en/components/block-input-events.html",
+            "subcontext_view": "https://docs.cocos.com/creator/2.4/manual/en/publish/publish-wechatgame-sub-domain.html",
+            "safe_area": "https://docs.cocos.com/creator/2.4/manual/en/components/safearea.html"
         },
         "animation": {
             "default_clip": "When checking, the deault animation clip is automatically played.",
@@ -79,6 +79,8 @@ module.exports = {
             "pressed_sprite": "The Sprite that is used when the button is in a pressed sate.",
             "hover_sprite": "The Sprite that is used when the button is hovered over.",
             "disabled_sprite": "The Sprite that is used when the button is in a disabled sate.",
+            'normal_material': 'The material used for the background image specified by the button under normal conditions',
+            'gray_material': 'The material used for the background image specified by the button in the disabled state',
             "target": "reference to the Sprite as button's background. When the state of the button changes the sprite's color or spriteFrame will be updated.",
             "click_events": "What method is called on the click event?"
         },
@@ -86,6 +88,21 @@ module.exports = {
             "design_resolution": "The resolution of the assets used in the game, in pixels.",
             "fit_height": "Canvas allows designers to automatically scale the resolution  to the full height of devices screen",
             "fit_width": "Canvas allows designers to automatically scale the resolution  to the full width of devices screen"
+        },
+        "camera": {
+            'zoomRatio': 'The camera zoom ratio.',
+            'fov': 'Field of view. The width of the Camera’s view angle, measured in degrees along the local Y axis.',
+            'orthoSize': 'The viewport size of the Camera when set to orthographic projection.',
+            'nearClip': 'The near clipping plane.',
+            'farClip': 'The far clipping plane.',
+            'ortho': 'Is the camera orthographic (true) or perspective (false)?',
+            'rect': 'Four values (0 ~ 1) that indicate where on the screen this camera view will be drawn.',
+            'cullingMask': 'This is used to render parts of the scene selectively.',
+            'clearFlags': 'Determining what to clear when camera rendering. \n - Color：Clear the background color. \n - Depth：Clear the depth buffer. \n - STENCIL：Clear the stencil.',
+            'backgroundColor': 'The color with which the screen will be cleared.',
+            'depth': 'Camera\'s depth in the camera rendering order.',
+            'targetTexture': 'Destination render texture. \n Usually cameras render directly to screen, but for some effects it is useful to make a camera render into a texture.',
+            'renderStages': 'Sets the camera\'s render stages.',
         },
         "label": {
             "string": "Text of the Label",
@@ -96,6 +113,10 @@ module.exports = {
             "line_height": "Line height, in points",
             "overflow": "Text layout modes: \n 1. CLAMP: text nodes outside the bounding box will be truncated \n 2. SHRINK: automatically shrink text box according to the constraint node \n 3. RESIZE: Automatically updates the Node based on heightof the text.",
             "wrap": "Wrap text?",
+            'bold': 'Enable bold',
+            'italic': 'Enable italic',
+            'underline': 'Enable underline',
+            'underline_height': 'Height of underline',
             "font": "What font to use",
             "system_font": "Whether to use the system default font",
             'cacheMode': 'The text cache mode includes the following three types: \n 1. NONE : Do not do any caching, text content is drawn once. \n 2. BITMAP: Add text as a static image to the dynamic atlas for batch merging, but not frequently dynamically Text content \n 3. CHAR: Splits text into characters and caches characters into character atlas, suitable for text content with repeated and frequently updated character content',
@@ -241,6 +262,7 @@ module.exports = {
             "currentTime": "The start time when video start to play.",
             "keepAspectRatio": "Whether keep the original video's aspect ratio.",
             "isFullscreen": "Whether keep the video fullscreen when it is playing.",
+            "stayOnBottom": "Always below the game view (only useful on Web. Note: The specific effects are not guaranteed to be consistent, depending on whether each browser supports or restricts)."
         },
         "webview": {
             "url": "A given URL to be loaded by the WebView, it should have a http or https prefix."
@@ -299,6 +321,11 @@ module.exports = {
             'category': 'Collider component category',
             'mask': 'The collider mask can collide with this collider'
         },
+        'collider3D': {
+            'center': 'The center point of the collider',
+            'size': 'The size of the box, in local space',
+            'radius': 'The radius of the sphere',
+        },
         'particle_system': {
             'preview': 'Play particle in edit mode',
             'custom': 'If set custom to true, then use custom properties insteadof read particle file',
@@ -340,7 +367,7 @@ module.exports = {
             'type': 'The mask type',
             'spriteFrame': 'The mask image',
             'inverted': 'The Reverse mask (Not supported Canvas Mode)',
-            'alphaThreshold': 'The alpha threshold，The content is drawn only where the stencil have pixel with alpha greater than the alphaThreshold (Not supported Canvas Mode)',
+            'alphaThreshold': 'The alpha threshold，The content is drawn only where the stencil have pixel with alpha greater than or equal to the alphaThreshold (Not supported Canvas Mode)',
             'segements': 'The segements for ellipse mask'
         },
         'physics': {
@@ -405,14 +432,18 @@ module.exports = {
             'gid': 'Specify the TiledTile gid.',
             'layer': 'Specify which TiledLayer the TiledTile belong to.'
         },
-        'wx_subcontext_view': {
-            'interval': 'The FPS of open data context, this property will overwrite the frame rate setting in open data context',
-        },
-        'swan_subcontext_view': {
-            'interval': 'The FPS of open data context, this property will overwrite the frame rate setting in open data context',
+        'subcontext_view': {
+            'fps': 'The FPS of open data context, this property will overwrite the frame rate setting in open data context',
         },
         'skeleton_animation': {
             'search_animation_clips': 'Search Animation Clips',
         },
+        'attach_util': {
+            "generate_attached_node": "Generate Attached Node"
+        },
+        'safe_area': {
+            'brief_help': 'This component is used to adjust the layout of current node to respect the safe area of a notched mobile device such as the iPhone X.' +
+                          'It is typically used for the top node of the UI interaction area. (It will take effect automatically on mobile device and has no effect in the editor.)'
+        }
     }
 };

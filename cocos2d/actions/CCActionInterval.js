@@ -627,6 +627,11 @@ cc.repeat = function (action, times) {
 };
 
 
+cc.repeatForever = function (action) {
+    return new cc.RepeatForever(action);
+}
+
+
 /*
  * Repeats an action for ever.  <br/>
  * To repeat the an action for a limited number of times use the Repeat action. <br/>
@@ -840,7 +845,7 @@ cc.Spawn = cc.Class({
  * @example
  * // example
  * var action = cc.spawn(cc.jumpBy(2, cc.v2(300, 0), 50, 4), cc.rotateBy(2, 720));
- * todo:It should be the direct use new
+ * todo: It should be the direct use new
  */
 cc.spawn = function (/*Multiple Arguments*/tempArray) {
     var paramArray = (tempArray instanceof Array) ? tempArray : arguments;
@@ -880,6 +885,10 @@ cc.RotateTo = cc.Class({
     name: 'cc.RotateTo',
     extends: cc.ActionInterval,
 
+    statics: {
+        _reverse: false,
+    },
+
     ctor:function (duration, dstAngle) {
         this._startAngle = 0;
         this._dstAngle = 0;
@@ -913,12 +922,12 @@ cc.RotateTo = cc.Class({
 
         let startAngle = target.angle % 360;
 
-        let angle = cc.macro.ROTATE_ACTION_CCW ? (this._dstAngle - startAngle) : (this._dstAngle + startAngle);
+        let angle = cc.RotateTo._reverse ? (this._dstAngle - startAngle) : (this._dstAngle + startAngle);
         if (angle > 180) angle -= 360;
         if (angle < -180) angle += 360;
 
         this._startAngle = startAngle;
-        this._angle = cc.macro.ROTATE_ACTION_CCW ? angle : -angle;
+        this._angle = cc.RotateTo._reverse ? angle : -angle;
     },
 
     reverse:function () {
@@ -965,8 +974,12 @@ cc.RotateBy = cc.Class({
     name: 'cc.RotateBy',
     extends: cc.ActionInterval,
 
+    statics: {
+        _reverse: false,
+    },
+
     ctor: function (duration, deltaAngle) {
-        deltaAngle *= cc.macro.ROTATE_ACTION_CCW ? 1 : -1;
+        deltaAngle *= cc.RotateBy._reverse ? 1 : -1;
 
         this._deltaAngle = 0;
         this._startAngle = 0;
@@ -1007,7 +1020,8 @@ cc.RotateBy = cc.Class({
     },
 
     reverse:function () {
-        var action = new cc.RotateBy(this._duration, -this._deltaAngle);
+        var action = new cc.RotateBy();
+        action.initWithDuration(this._duration, -this._deltaAngle);
         this._cloneDecoration(action);
         this._reverseEaseList(action);
         return action;

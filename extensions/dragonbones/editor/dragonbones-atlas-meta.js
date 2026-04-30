@@ -32,26 +32,21 @@ const CustomAssetMeta = Editor.metas['custom-asset'];
 class DragonBonesAtlasMeta extends CustomAssetMeta {
     constructor (assetdb) {
         super(assetdb);
-        this.atlasJson = '';
-        this.texture = '';
     }
 
-    static version () { return '1.0.0'; }
+    static version () { return '1.0.3'; }
     static defaultType () {
         return 'dragonbones-atlas';
     }
 
     static validate (assetpath) {
-        var json;
-        var text = Fs.readFileSync(assetpath, 'utf8');
         try {
-            json = JSON.parse(text);
+            const json = Fs.readJsonSync(assetpath);
+            return typeof json.imagePath === 'string' && Array.isArray(json.SubTexture);
         }
         catch (e) {
             return false;
         }
-
-        return typeof json.imagePath === 'string' && Array.isArray(json.SubTexture);
     }
 
     postImport (fspath, cb) {
@@ -68,15 +63,11 @@ class DragonBonesAtlasMeta extends CustomAssetMeta {
                 return cb(e);
             }
 
-            // record the raw file data
-            this.atlasJson = data;
-
             // parse the depended texture
             var imgPath = Path.resolve(Path.dirname(fspath), json.imagePath);
-            var uuid = this._assetdb.fspathToUuid(imgPath);
-            if (uuid) {
+            var textureUUID = this._assetdb.fspathToUuid(imgPath);
+            if (textureUUID) {
                 console.log('UUID is initialized for "%s".', imgPath);
-                this.texture = uuid;
             }
             else if (!Fs.existsSync(imgPath)) {
                 Editor.error('Can not find texture "%s" for atlas "%s"', json.imagePath, fspath);
@@ -88,8 +79,8 @@ class DragonBonesAtlasMeta extends CustomAssetMeta {
 
             var asset = new dragonBones.DragonBonesAtlasAsset();
             asset.name = Path.basenameNoExt(fspath);
-            asset.atlasJson = this.atlasJson;
-            asset.texture = Editor.serialize.asAsset(this.texture);
+            asset.atlasJson = data;
+            asset.texture = Editor.serialize.asAsset(textureUUID);
             this._assetdb.saveAssetToLibrary(this.uuid, asset);
             cb();
         });

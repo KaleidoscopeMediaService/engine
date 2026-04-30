@@ -29,13 +29,11 @@ const AnimationClip = require('../../animation/animation-clip');
 const EventTarget = require('../event/event-target');
 const js = require('../platform/js');
 
-function equalClips (clip1, clip2) {
-    if (clip1 === clip2) {
-        return true;
-    }
-
-    return clip1 && clip2 && (clip1.name === clip2.name || clip1._uuid === clip2._uuid);
-}
+let equalClips = CC_EDITOR ? function (clip1, clip2) {
+    return clip1 === clip2 || (clip1 && clip2 && (clip1.name === clip2.name || clip1._uuid === clip2._uuid));
+} : function (clip1, clip2) {
+    return clip1 === clip2;
+};
 
 /**
  * !#en The event type supported by Animation
@@ -62,7 +60,7 @@ let EventType = cc.Enum({
     /**
      * !#en Emit when pause animation
      * !#zh 暂停播放时触发
-     * @property {String} PAUSE   
+     * @property {String} PAUSE
      * @static
      */
     PAUSE: 'pause',
@@ -91,7 +89,7 @@ let EventType = cc.Enum({
 
 /**
  * !#en The animation component is used to play back animations.
- *   
+ *
  * Animation provide several events to register：
  *  - play : Emit when begin playing animation
  *  - stop : Emit when stop playing animation
@@ -101,7 +99,7 @@ let EventType = cc.Enum({
  *  - finished : Emit when finish playing animation
  *
  * !#zh Animation 组件用于播放动画。
- *   
+ *
  * Animation 提供了一系列可注册的事件：
  *  - play : 开始播放时
  *  - stop : 停止播放时
@@ -109,7 +107,7 @@ let EventType = cc.Enum({
  *  - resume : 恢复播放时
  *  - lastframe : 假如动画循环次数大于 1，当动画播放到最后一帧时
  *  - finished : 动画播放完成时
- * 
+ *
  * @class Animation
  * @extends Component
  * @uses EventTarget
@@ -165,20 +163,14 @@ let Animation = cc.Class({
                 }
 
                 this._defaultClip = value;
-
                 if (!value) {
                     return;
                 }
 
-                let clips = this._clips;
-
-                for (let i = 0, l = clips.length; i < l; i++) {
-                    if (equalClips(value, clips[i])) {
-                        return;
-                    }
+                const contain = this._clips.findIndex((clip) => equalClips(clip, value)) >= 0;
+                if (!contain) {
+                    this.addClip(value);
                 }
-
-                this.addClip(value);
             },
             tooltip: CC_DEV && 'i18n:COMPONENT.animation.default_clip'
         },
@@ -401,7 +393,7 @@ let Animation = cc.Class({
             return;
         }
         if (name) {
-            let state = this._nameToState[name];
+            let state = this.getAnimationState(name);
             if (state) {
                 this._animator.resumeState(state);
             }
@@ -421,7 +413,7 @@ let Animation = cc.Class({
     setCurrentTime: function (time, name) {
         this._init();
         if (name) {
-            let state = this._nameToState[name];
+            let state = this.getAnimationState(name);
             if (state) {
                 this._animator.setStateTime(state, time);
             }
@@ -458,6 +450,18 @@ let Animation = cc.Class({
         }
 
         return state || null;
+    },
+
+    /**
+     * !#en Check whether the animation State with the name already exists.
+     * !#zh 通过名称判断是否包含某动画状态。也可用来判断是否已经添加了同名 clip.
+     * @method hasAnimationState
+     * @param {String} name
+     * @return {boolean} - Whether the animation State with the name already exists.
+     */
+    hasAnimationState: function (name) {
+        this._init();
+        return !!(this._nameToState[name]);
     },
 
     /**
@@ -502,7 +506,7 @@ let Animation = cc.Class({
     },
 
     /**
-     * !#en 
+     * !#en
      * Remove clip from the animation list. This will remove the clip and any animation states based on it.
      * If there are animation states depand on the clip are playing or clip is defaultClip, it will not delete the clip.
      * But if force is true, then will always remove the clip and any animation states based on it. If clip is defaultClip, defaultClip will be reset to null
@@ -524,8 +528,7 @@ let Animation = cc.Class({
         let state;
         for (let name in this._nameToState) {
             state = this._nameToState[name];
-            let stateClip = state.clip;
-            if (stateClip === clip) {
+            if (equalClips(state.clip, clip)) {
                 break;
             }
         }
@@ -535,7 +538,7 @@ let Animation = cc.Class({
             else {
                 if (!CC_TEST) cc.warnID(3902);
                 return;
-            } 
+            }
         }
 
         if (state && state.isPlaying) {
@@ -547,11 +550,11 @@ let Animation = cc.Class({
         }
 
         this._clips = this._clips.filter(function (item) {
-            return item !== clip;
+            return !equalClips(item, clip);
         });
 
         if (state) {
-            delete this._nameToState[state.name];    
+            delete this._nameToState[state.name];
         }
     },
 
@@ -567,7 +570,7 @@ let Animation = cc.Class({
         this._init();
 
         if (name) {
-            let state = this._nameToState[name];
+            let state = this.getAnimationState(name);
             if (state) {
                 state.sample();
             }
@@ -577,9 +580,8 @@ let Animation = cc.Class({
         }
     },
 
-
     /**
-     * !#en 
+     * !#en
      * Register animation event callback.
      * The event arguments will provide the AnimationState which emit the event.
      * When play an animation, will auto register the event callback to the AnimationState, and unregister the event callback from the AnimationState when animation stopped.
@@ -591,7 +593,7 @@ let Animation = cc.Class({
      * @param {String} type - A string representing the event type to listen for.
      * @param {Function} callback - The callback that will be invoked when the event is dispatched.
      *                              The callback is ignored if it is a duplicate (the callbacks are unique).
-     * @param {cc.AnimationState} state 
+     * @param {cc.AnimationState} state
      * @param {Object} [target] - The target (this object) to invoke the callback, can be null
      * @param {Boolean} [useCapture=false] - When set to true, the capture argument prevents callback
      *                              from being invoked when the event's eventPhase attribute value is BUBBLING_PHASE.
@@ -602,11 +604,12 @@ let Animation = cc.Class({
      * @typescript
      * on(type: string, callback: (event: Event.EventCustom) => void, target?: any, useCapture?: boolean): (event: Event.EventCustom) => void
      * on<T>(type: string, callback: (event: T) => void, target?: any, useCapture?: boolean): (event: T) => void
+     * on(type: string, callback: (type: string, state: cc.AnimationState) => void, target?: any, useCapture?: boolean): (type: string, state: cc.AnimationState) => void
      * @example
      * onPlay: function (type, state) {
      *     // callback
      * }
-     * 
+     *
      * // register event to all animation
      * animation.on('play', this.onPlay, this);
      */
@@ -614,12 +617,11 @@ let Animation = cc.Class({
         this._init();
 
         let ret = this._EventTargetOn(type, callback, target, useCapture);
-        
+
         if (type === 'lastframe') {
-            let array = this._animator._anims.array;
-            for (let i = 0; i < array.length; ++i) {
-                let state = array[i];
-                state._lastframeEventOn = true;
+            let states = this._nameToState;
+            for (let name in states) {
+                states[name]._lastframeEventOn = true;
             }
         }
 
@@ -649,10 +651,9 @@ let Animation = cc.Class({
         this._init();
 
         if (type === 'lastframe') {
-            let nameToState = this._nameToState;
-            for (let name in nameToState) {
-                let state = nameToState[name];
-                state._lastframeEventOn = false;
+            let states = this._nameToState;
+            for (let name in states) {
+                states[name]._lastframeEventOn = false;
             }
         }
 
@@ -677,7 +678,7 @@ let Animation = cc.Class({
 
     _createStates: function() {
         this._nameToState = js.createMap(true);
-        
+
         // create animation states
         let state = null;
         let defaultClipState = false;

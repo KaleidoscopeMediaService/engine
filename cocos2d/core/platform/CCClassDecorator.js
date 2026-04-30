@@ -139,7 +139,7 @@ function extractActualDefaultValues (ctor) {
     }
     catch (e) {
         if (CC_DEV) {
-            cc.warnID(3652, js.getClassName(ctor), e);
+            cc.errorID(3652, js.getClassName(ctor), e);
         }
         return {};
     }
@@ -148,17 +148,16 @@ function extractActualDefaultValues (ctor) {
 
 function genProperty (ctor, properties, propName, options, desc, cache) {
     var fullOptions;
+    var isGetset = desc && (desc.get || desc.set);
     if (options) {
-        fullOptions = CC_DEV ? Preprocess.getFullFormOfProperty(options, propName, js.getClassName(ctor)) :
-                               Preprocess.getFullFormOfProperty(options);
+        fullOptions = Preprocess.getFullFormOfProperty(options, isGetset);
     }
     var existsProperty = properties[propName];
     var prop = js.mixin(existsProperty || {}, fullOptions || options || {});
 
-    var isGetset = desc && (desc.get || desc.set);
     if (isGetset) {
         // typescript or babel
-        if (CC_DEV && options && (options.get || options.set)) {
+        if (CC_DEV && options && ((fullOptions || options).get || (fullOptions || options).set)) {
             var errorProps = getSubDict(cache, 'errorProps');
             if (!errorProps[propName]) {
                 errorProps[propName] = true;
@@ -213,7 +212,7 @@ function genProperty (ctor, properties, propName, options, desc, cache) {
             }
         }
 
-        if (CC_EDITOR || CC_TEST) {
+        if ((CC_EDITOR && !Editor.isBuilder) || CC_TEST) {
             if (!fullOptions && options && options.hasOwnProperty('default')) {
                 cc.warnID(3653, propName, js.getClassName(ctor));
                 // prop.default = options.default;
@@ -221,16 +220,6 @@ function genProperty (ctor, properties, propName, options, desc, cache) {
             else if (!isDefaultValueSpecified) {
                 cc.warnID(3654, js.getClassName(ctor), propName);
                 // prop.default = fullOptions.hasOwnProperty('default') ? fullOptions.default : undefined;
-            }
-            if (cc.RawAsset.wasRawAssetType(prop.url) &&
-                prop._short &&
-                isDefaultValueSpecified &&
-                defaultValue == null
-            ) {
-                // Avoid excessive warning when the ts decorator format is wrong
-                if (typeof options !== 'function' || cc.RawAsset.isRawAssetType(options)) {
-                    cc.warnID(3656, js.getClassName(ctor), propName);
-                }
             }
         }
         prop.default = defaultValue;
@@ -418,7 +407,7 @@ var ccclass = checkCtorArgument(function (ctor, name) {
  *     }
  * });
  * @typescript
- * property(options?: {type?: any; visible?: boolean|(() => boolean); displayName?: string; tooltip?: string; multiline?: boolean; readonly?: boolean; min?: number; max?: number; step?: number; range?: number[]; slide?: boolean; serializable?: boolean; formerlySerializedAs?: string; editorOnly?: boolean; override?: boolean; animatable?: boolean} | any[]|Function|cc.ValueType|number|string|boolean): Function
+ * property(options?: {type?: any; visible?: boolean|(() => boolean); displayName?: string; tooltip?: string; multiline?: boolean; readonly?: boolean; min?: number; max?: number; step?: number; range?: number[]; slide?: boolean; serializable?: boolean; formerlySerializedAs?: string; editorOnly?: boolean; override?: boolean; animatable?: boolean, userData?: Record<string, any> } | any[]|Function|cc.ValueType|number|string|boolean): Function
  * property(_target: Object, _key: any, _desc?: any): void
  */
 function property (ctorProtoOrOptions, propName, desc) {
@@ -724,3 +713,8 @@ cc._decorator = module.exports = {
     help,
     mixins,
 };
+
+// fix submodule pollute ...
+/**
+ * @submodule cc
+ */

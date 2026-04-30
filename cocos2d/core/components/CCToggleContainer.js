@@ -109,6 +109,7 @@ var ToggleContainer = cc.Class({
     },
 
     onEnable: function () {
+        this._makeAtLeastOneToggleChecked();
         this.node.on('child-added', this._allowOnlyOneToggleChecked, this);
         this.node.on('child-removed', this._makeAtLeastOneToggleChecked, this);
     },
@@ -117,10 +118,6 @@ var ToggleContainer = cc.Class({
         this.node.off('child-added', this._allowOnlyOneToggleChecked, this);
         this.node.off('child-removed', this._makeAtLeastOneToggleChecked, this);
     },
-
-    start: function () {
-        this._makeAtLeastOneToggleChecked();
-    }
 });
 
 /**
@@ -131,7 +128,9 @@ var ToggleContainer = cc.Class({
 var js = require('../platform/js');
 js.get(ToggleContainer.prototype, 'toggleItems',
     function () {
-        return this.node.getComponentsInChildren(cc.Toggle);
+        return this.node._children.map(function (item) {
+            return item.getComponent(cc.Toggle);
+        }).filter(Boolean);
     }
 );
 

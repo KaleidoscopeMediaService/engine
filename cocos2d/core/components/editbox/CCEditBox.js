@@ -25,7 +25,7 @@
  ****************************************************************************/
 
 const macro = require('../../platform/CCMacro');
-const EditBoxImplBase = require('./EditBoxImplBase');
+const EditBoxImplBase = require('../editbox/EditBoxImplBase');
 const Label = require('../CCLabel');
 const Types = require('./types');
 const InputMode = Types.InputMode;
@@ -59,7 +59,6 @@ let EditBox = cc.Class({
     },
 
     properties: {
-        _useOriginalSize: true,
         _string: '',
         /**
          * !#en Input string of EditBox.
@@ -72,6 +71,7 @@ let EditBox = cc.Class({
                 return this._string;
             },
             set(value) {
+                value = '' + value;
                 if (this.maxLength >= 0 && value.length >= this.maxLength) {
                     value = value.slice(0, this.maxLength);
                 }
@@ -99,8 +99,8 @@ let EditBox = cc.Class({
         },
 
          /**
-         * !en The Label component attached to the node for EditBox's placeholder text label
-         * !zh 输入框占位符节点上挂载的 Label 组件对象
+         * !#en The Label component attached to the node for EditBox's placeholder text label
+         * !#zh 输入框占位符节点上挂载的 Label 组件对象
          * @property {Label} placeholderLabel
          */
         placeholderLabel: {
@@ -145,14 +145,14 @@ let EditBox = cc.Class({
          */
         backgroundImage: {
             get () {
-                // if (!CC_EDITOR) cc.warnID(5400, 'editBox.backgroundImage', 'editBox.background');
+                // if (!CC_EDITOR) cc.warnID(1400, 'editBox.backgroundImage', 'editBox.background');
                 if (!this.background) {
                     return null;
                 }
                 return this.background.spriteFrame;
             },
             set (value) {
-                // if (!CC_EDITOR) cc.warnID(5400, 'editBox.backgroundImage', 'editBox.background');
+                // if (!CC_EDITOR) cc.warnID(1400, 'editBox.backgroundImage', 'editBox.background');
                 if (this.background) {
                     this.background.spriteFrame = value;
                 }
@@ -225,14 +225,14 @@ let EditBox = cc.Class({
          */
         fontSize: {
             get () {
-                // if (!CC_EDITOR) cc.warnID(5400, 'editBox.fontSize', 'editBox.textLabel.fontSize');
+                // if (!CC_EDITOR) cc.warnID(1400, 'editBox.fontSize', 'editBox.textLabel.fontSize');
                 if (!this.textLabel) {
-                    return null;
+                    return 0;
                 }
                 return this.textLabel.fontSize;
             },
             set (value) {
-                // if (!CC_EDITOR) cc.warnID(5400, 'editBox.fontSize', 'editBox.textLabel.fontSize');
+                // if (!CC_EDITOR) cc.warnID(1400, 'editBox.fontSize', 'editBox.textLabel.fontSize');
                 if (this.textLabel) {
                     this.textLabel.fontSize = value;
                 }
@@ -253,14 +253,14 @@ let EditBox = cc.Class({
          */
         lineHeight: {
             get () {
-                // if (!CC_EDITOR) cc.warnID(5400, 'editBox.lineHeight', 'editBox.textLabel.lineHeight');
+                // if (!CC_EDITOR) cc.warnID(1400, 'editBox.lineHeight', 'editBox.textLabel.lineHeight');
                 if (!this.textLabel) {
-                    return null;
+                    return 0;
                 }
                 return this.textLabel.lineHeight;
             },
             set (value) {
-                // if (!CC_EDITOR) cc.warnID(5400, 'editBox.lineHeight', 'editBox.textLabel.lineHeight');
+                // if (!CC_EDITOR) cc.warnID(1400, 'editBox.lineHeight', 'editBox.textLabel.lineHeight');
                 if (this.textLabel) {
                     this.textLabel.lineHeight = value;
                 }
@@ -281,14 +281,14 @@ let EditBox = cc.Class({
          */
         fontColor: {
             get () {
-                // if (!CC_EDITOR) cc.warnID(5400, 'editBox.fontColor', 'editBox.textLabel.node.color');
+                // if (!CC_EDITOR) cc.warnID(1400, 'editBox.fontColor', 'editBox.textLabel.node.color');
                 if (!this.textLabel) {
-                    return null;
+                    return cc.Color.BLACK;
                 }
                 return this.textLabel.node.color;
             },
             set (value) {
-                // if (!CC_EDITOR) cc.warnID(5400, 'editBox.fontColor', 'editBox.textLabel.node.color');
+                // if (!CC_EDITOR) cc.warnID(1400, 'editBox.fontColor', 'editBox.textLabel.node.color');
                 if (this.textLabel) {
                     this.textLabel.node.color = value;
                     this.textLabel.node.opacity = value.a;
@@ -297,10 +297,7 @@ let EditBox = cc.Class({
         },
 
         // To be removed in the future
-        _N$fontColor: {
-            default: undefined,
-            type: cc.Color,
-        },
+        _N$fontColor: undefined,
 
         /**
          * !#en The display text of placeholder.
@@ -336,14 +333,14 @@ let EditBox = cc.Class({
          */
         placeholderFontSize: {
             get () {
-                // if (!CC_EDITOR) cc.warnID(5400, 'editBox.placeholderFontSize', 'editBox.placeholderLabel.fontSize');
+                // if (!CC_EDITOR) cc.warnID(1400, 'editBox.placeholderFontSize', 'editBox.placeholderLabel.fontSize');
                 if (!this.placeholderLabel) {
-                    return null;
+                    return 0;
                 }
                 return this.placeholderLabel.fontSize;
             },
             set (value) {
-                // if (!CC_EDITOR) cc.warnID(5400, 'editBox.placeholderFontSize', 'editBox.placeholderLabel.fontSize');
+                // if (!CC_EDITOR) cc.warnID(1400, 'editBox.placeholderFontSize', 'editBox.placeholderLabel.fontSize');
                 if (this.placeholderLabel) {
                     this.placeholderLabel.fontSize = value;
                 }
@@ -364,14 +361,14 @@ let EditBox = cc.Class({
          */
         placeholderFontColor: {
             get () {
-                // if (!CC_EDITOR) cc.warnID(5400, 'editBox.placeholderFontColor', 'editBox.placeholderLabel.node.color');
+                // if (!CC_EDITOR) cc.warnID(1400, 'editBox.placeholderFontColor', 'editBox.placeholderLabel.node.color');
                 if (!this.placeholderLabel) {
-                    return null;
+                    return cc.Color.BLACK;
                 }
                 return this.placeholderLabel.node.color;
             },
             set (value) {
-                // if (!CC_EDITOR) cc.warnID(5400, 'editBox.placeholderFontColor', 'editBox.placeholderLabel.node.color');
+                // if (!CC_EDITOR) cc.warnID(1400, 'editBox.placeholderFontColor', 'editBox.placeholderLabel.node.color');
                 if (this.placeholderLabel) {
                     this.placeholderLabel.node.color = value;
                     this.placeholderLabel.node.opacity = value.a;
@@ -380,10 +377,7 @@ let EditBox = cc.Class({
         },
 
         // To be removed in the future
-        _N$placeholderFontColor: {
-            default: undefined,
-            type: cc.Color,
-        },
+        _N$placeholderFontColor: undefined,
 
         /**
          * !#en The maximize input length of EditBox.
@@ -799,7 +793,7 @@ let EditBox = cc.Class({
      * @deprecated since 2.0.8
      */
     setFocus () {
-        cc.warnID(1400, 'setFocus()', 'focus()');
+        cc.errorID(1400, 'setFocus()', 'focus()');
         if (this._impl) {
             this._impl.setFocus(true);
         }

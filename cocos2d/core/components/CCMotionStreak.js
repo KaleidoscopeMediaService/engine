@@ -25,8 +25,6 @@
  ****************************************************************************/
 
 const RenderComponent = require('../components/CCRenderComponent');
-const Material = require('../assets/material/CCMaterial');
-const textureUtil = require('../utils/texture-util');
 const BlendFunc = require('../../core/utils/blend-func');
 
 /**
@@ -41,6 +39,7 @@ const BlendFunc = require('../../core/utils/blend-func');
  * !#zh 运动轨迹，用于游戏对象的运动轨迹上实现拖尾渐隐效果。
  * @class MotionStreak
  * @extends Component
+ * @uses BlendFunc
  */
 var MotionStreak = cc.Class({
     name: 'cc.MotionStreak',
@@ -62,6 +61,8 @@ var MotionStreak = cc.Class({
 
     ctor () {
         this._points = [];
+        this._lastWPos = new cc.Vec2();
+        this._lastWPosUpdated = false;
     },
 
     properties: {
@@ -161,14 +162,7 @@ var MotionStreak = cc.Class({
                 if (this._texture === value) return;
 
                 this._texture = value;
-
-                if (!value || !value.loaded) {
-                    this.disableRender();
-                    this._ensureLoadTexture();
-                }
-                else {
-                    this._activateMaterial();
-                }
+                this._updateMaterial();
             },
             type: cc.Texture2D,
             animatable: false,
@@ -187,10 +181,12 @@ var MotionStreak = cc.Class({
         _color: cc.Color.WHITE,
         color: {
             get () {
-                return this._color;
+                return this._color.clone();
             },
             set (value) {
-                this._color = value;
+                if (!this._color.equals(value)) {
+                    this._color.set(value);
+                }
             },
             type: cc.Color,
             tooltip: CC_DEV && 'i18n:COMPONENT.motionStreak.color'
@@ -220,45 +216,14 @@ var MotionStreak = cc.Class({
 
     onEnable () {
         this._super();
-
-        if (!this._texture || !this._texture.loaded) {
-            this.disableRender();
-            this._ensureLoadTexture();
-        }
-        else {
-            this._activateMaterial();
-        }
         this.reset();
     },
 
-    _ensureLoadTexture: function () {
-        if (this._texture && !this._texture.loaded) {
-            // load exists texture
-            let self = this;
-            textureUtil.postLoadTexture(this._texture, function () {
-                self._activateMaterial();
-            });
-        }
-    },
+    _updateMaterial () {
+        let material = this.getMaterial(0);
+        material && material.setProperty('texture', this._texture);
 
-    _activateMaterial () {
-        if (!this._texture || !this._texture.loaded) {
-            this.disableRender();
-            return;
-        }
-
-        let material = this.sharedMaterials[0];
-        if (!material) {
-            material = Material.getInstantiatedBuiltinMaterial('2d-sprite', this);
-        }
-        else {
-            material = Material.getInstantiatedMaterial(material, this);
-        }
-
-        material.setProperty('texture', this._texture);
-
-        this.setMaterial(0, material);
-        this.markForRender(true);
+        BlendFunc.prototype._updateMaterial.call(this);
     },
 
     onFocusInEditor: CC_EDITOR && function () {
@@ -283,15 +248,15 @@ var MotionStreak = cc.Class({
      */
     reset () {
         this._points.length = 0;
-        let renderData = this._renderData;
-        if (renderData) {
-            renderData.dataLength = 0;
-            renderData.vertexCount = 0;
-            renderData.indiceCount = 0;
-        }
+        this._assembler && this._assembler._renderData.clear();
+        this._lastWPosUpdated = false;
         if (CC_EDITOR) {
             cc.engine.repaintInEditMode();
         }
+    },
+
+    lateUpdate (dt) {
+        this._assembler && this._assembler.update(this, dt);
     }
 });
 

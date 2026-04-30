@@ -24,6 +24,8 @@
  THE SOFTWARE.
  ****************************************************************************/
 
+import Mat4 from '../../value-types/mat4';
+
 const utils = require('../../platform/utils');
 const macro = require('../../platform/CCMacro');
 const Types = require('./types');
@@ -35,7 +37,6 @@ const js = cc.js;
 const InputMode = Types.InputMode;
 const InputFlag = Types.InputFlag;
 const KeyboardReturnType = Types.KeyboardReturnType;
-const math = cc.vmath;
 
 // polyfill
 let polyfill = {
@@ -62,18 +63,19 @@ let _currentEditBoxImpl = null;
 let _fullscreen = false;
 let _autoResize = false;
 
+const BaseClass = EditBox._ImplClass;
  // This is an adapter for EditBoxImpl on web platform.
  // For more adapters on other platforms, please inherit from EditBoxImplBase and implement the interface.
 function WebEditBoxImpl () {
+    BaseClass.call(this);
     this._domId = `EditBoxId_${++_domCount}`;
     this._placeholderStyleSheet = null;
     this._elem = null;
     this._isTextArea = false;
-    this._editing = false;
 
     // matrix
-    this._worldMat = math.mat4.create();
-    this._cameraMat = math.mat4.create();
+    this._worldMat = new Mat4();
+    this._cameraMat = new Mat4();
     // matrix cache
     this._m00 = 0;
     this._m01 = 0;
@@ -83,6 +85,8 @@ function WebEditBoxImpl () {
     this._m13 = 0;
     this._w = 0;
     this._h = 0;
+    // viewport cache
+    this._cacheViewportRect = cc.rect(0, 0, 0, 0);
 
     // inputType cache
     this._inputMode = null;
@@ -105,7 +109,7 @@ function WebEditBoxImpl () {
     this._placeholderLineHeight = null;
 }
 
-js.extend(WebEditBoxImpl, EditBox._ImplClass);
+js.extend(WebEditBoxImpl, BaseClass);
 EditBox._ImplClass = WebEditBoxImpl;
 
 Object.assign(WebEditBoxImpl.prototype, {
@@ -132,17 +136,6 @@ Object.assign(WebEditBoxImpl.prototype, {
 
         _fullscreen = cc.view.isAutoFullScreenEnabled();
         _autoResize = cc.view._resizeWithBrowserSize;
-    },
-
-    enable () {
-        // Do nothing
-    },
-
-    disable () {
-        // Need to hide dom when disable editBox on editing
-        if (this._editing) {
-            this._elem.blur();
-        }
     },
 
     clear () {
@@ -172,32 +165,21 @@ Object.assign(WebEditBoxImpl.prototype, {
         elem.style.height = height + 'px';
     },
 
-    setFocus (value) {
-        if (value) {
-            this.beginEditing();
-        }
-        else {
-            this._elem.blur();
-        }
-    },
-
-    isFocused () {
-        return this._editing;
-    },
-
     beginEditing () {
         if (_currentEditBoxImpl && _currentEditBoxImpl !== this) {
             _currentEditBoxImpl.setFocus(false);
         }
         this._editing = true;
         _currentEditBoxImpl = this;
+        this._delegate.editBoxEditingDidBegan();
         this._showDom();
         this._elem.focus();  // set focus
-        this._delegate.editBoxEditingDidBegan();  
     },
 
     endEditing () {
-        // Do nothing, handle endEditing on blur callback
+        if (this._elem) {
+            this._elem.blur();
+        }
     },
 
     // ==========================================================================
@@ -273,22 +255,21 @@ Object.assign(WebEditBoxImpl.prototype, {
 
     _hideDomOnMobile () {
         if (cc.sys.os === cc.sys.OS_ANDROID) {
-            // Closing soft keyboard on mobile will fire 'resize' event
-            // So we need to set a timeout to enable resizeWithBrowserSize
+            if (_autoResize) {
+                cc.view.resizeWithBrowserSize(true);
+            }
+            // In case enter full screen when soft keyboard still showing
             setTimeout(function () {
                 if (!_currentEditBoxImpl) {
                     if (_fullscreen) {
                         cc.view.enableAutoFullScreen(true);
                     }
-                    if (_autoResize) {
-                        cc.view.resizeWithBrowserSize(true);
-                    }
                 }
             }, DELAY_TIME);
         }
-        
-        // Some browser like wechat on iOS need to mannully scroll back window
-        this._scrollBackWindow();
+
+        // This is an outdated strategy that causes other problems on newer systems, consider removing
+        // this._scrollBackWindow();
     },
 
     // adjust view to editBox
@@ -317,62 +298,76 @@ Object.assign(WebEditBoxImpl.prototype, {
         }, DELAY_TIME);
     },
 
-    _updateMatrix () {    
+    _updateCameraMatrix () {
         let node = this._delegate.node;    
         node.getWorldMatrix(this._worldMat);
         let worldMat = this._worldMat;
+        let nodeContentSize = node._contentSize,
+            nodeAnchorPoint = node._anchorPoint;
 
+        _vec3.x = -nodeAnchorPoint.x * nodeContentSize.width;
+        _vec3.y = -nodeAnchorPoint.y * nodeContentSize.height;
+    
+        Mat4.transform(worldMat, worldMat, _vec3);
+
+        // can't find node camera in editor
+        if (CC_EDITOR) {
+            this._cameraMat = worldMat;
+        }
+        else {
+            let camera = cc.Camera.findCamera(node);
+            if (!camera) {
+                return false;
+            }
+            camera.getWorldToScreenMatrix2D(this._cameraMat);
+            Mat4.mul(this._cameraMat, this._cameraMat, worldMat);
+        }
+        return true;
+    },
+
+    _updateMatrix () {    
+        if (CC_EDITOR || !this._updateCameraMatrix()) {
+            return;
+        }
+        let cameraMatm = this._cameraMat.m;
+        let node = this._delegate.node;
+        let localView = cc.view;
         // check whether need to update
-        if (this._m00 === worldMat.m00 && this._m01 === worldMat.m01 &&
-            this._m04 === worldMat.m04 && this._m05 === worldMat.m05 &&
-            this._m12 === worldMat.m12 && this._m13 === worldMat.m13 &&
-            this._w === node._contentSize.width && this._h === node._contentSize.height) {
+        if (this._m00 === cameraMatm[0] && this._m01 === cameraMatm[1] &&
+            this._m04 === cameraMatm[4] && this._m05 === cameraMatm[5] &&
+            this._m12 === cameraMatm[12] && this._m13 === cameraMatm[13] &&
+            this._w === node._contentSize.width && this._h === node._contentSize.height &&
+            this._cacheViewportRect.equals(localView._viewportRect)) {
             return;
         }
 
         // update matrix cache
-        this._m00 = worldMat.m00;
-        this._m01 = worldMat.m01;
-        this._m04 = worldMat.m04;
-        this._m05 = worldMat.m05;
-        this._m12 = worldMat.m12;
-        this._m13 = worldMat.m13;
+        this._m00 = cameraMatm[0];
+        this._m01 = cameraMatm[1];
+        this._m04 = cameraMatm[4];
+        this._m05 = cameraMatm[5];
+        this._m12 = cameraMatm[12];
+        this._m13 = cameraMatm[13];
         this._w = node._contentSize.width;
         this._h = node._contentSize.height;
+        // update viewport cache
+        this._cacheViewportRect.set(localView._viewportRect);
 
-        let scaleX = cc.view._scaleX, scaleY = cc.view._scaleY,
-            viewport = cc.view._viewportRect,
-            dpr = cc.view._devicePixelRatio;
-
-        _vec3.x = -node._anchorPoint.x * this._w;
-        _vec3.y = -node._anchorPoint.y * this._h;
-    
-        math.mat4.translate(worldMat, worldMat, _vec3);
-
-        // can't find camera in editor
-        let cameraMat;
-        if (CC_EDITOR) {
-            cameraMat = this._cameraMat = worldMat;
-        }
-        else {
-            let camera = cc.Camera.findCamera(node);
-            camera.getWorldToCameraMatrix(this._cameraMat);
-            cameraMat = this._cameraMat;
-            math.mat4.mul(cameraMat, cameraMat, worldMat);
-        }
+        let scaleX = localView._scaleX, scaleY = localView._scaleY,
+            viewport = localView._viewportRect,
+            dpr = localView._devicePixelRatio;
         
-    
         scaleX /= dpr;
         scaleY /= dpr;
     
         let container = cc.game.container;
-        let a = cameraMat.m00 * scaleX, b = cameraMat.m01, c = cameraMat.m04, d = cameraMat.m05 * scaleY;
+        let a = cameraMatm[0] * scaleX, b = cameraMatm[1], c = cameraMatm[4], d = cameraMatm[5] * scaleY;
     
         let offsetX = container && container.style.paddingLeft && parseInt(container.style.paddingLeft);
         offsetX += viewport.x / dpr;
         let offsetY = container && container.style.paddingBottom && parseInt(container.style.paddingBottom);
         offsetY += viewport.y / dpr;
-        let tx = cameraMat.m12 * scaleX + offsetX, ty = cameraMat.m13 * scaleY + offsetY;
+        let tx = cameraMatm[12] * scaleX + offsetX, ty = cameraMatm[13] * scaleY + offsetY;
     
         if (polyfill.zoomInvalid) {
             this.setSize(node.width * a, node.height * d);
@@ -426,6 +421,7 @@ Object.assign(WebEditBoxImpl.prototype, {
         // begin to updateInputType
         if (inputFlag === InputFlag.PASSWORD) {
             elem.type = 'password';
+            elem.style.textTransform = 'none';
             return;
         }
     
@@ -438,6 +434,7 @@ Object.assign(WebEditBoxImpl.prototype, {
         } else if(inputMode === InputMode.PHONE_NUMBER) {
             type = 'number';
             elem.pattern = '[0-9]*';
+            elem.onmousewheel = function () { return false; };
         } else if(inputMode === InputMode.URL) {
             type = 'url';
         } else {
@@ -482,7 +479,7 @@ Object.assign(WebEditBoxImpl.prototype, {
         elem.style.active = 0;
         elem.style.outline = 'medium';
         elem.style.padding = '0';
-        elem.style.textTransform = 'uppercase';
+        elem.style.textTransform = 'none';
         elem.style.position = "absolute";
         elem.style.bottom = "0px";
         elem.style.left = LEFT_PADDING + "px";
@@ -525,9 +522,12 @@ Object.assign(WebEditBoxImpl.prototype, {
             font = textLabel.fontFamily;
         }
 
+        // get font size
+        let fontSize = textLabel.fontSize * textLabel.node.scaleY;
+
         // whether need to update
         if (this._textLabelFont === font
-            && this._textLabelFontSize === textLabel.fontSize
+            && this._textLabelFontSize === fontSize
             && this._textLabelFontColor === textLabel.fontColor
             && this._textLabelAlign === textLabel.horizontalAlign) {
                 return;
@@ -535,15 +535,15 @@ Object.assign(WebEditBoxImpl.prototype, {
 
         // update cache
         this._textLabelFont = font;
-        this._textLabelFontSize = textLabel.fontSize;
+        this._textLabelFontSize = fontSize;
         this._textLabelFontColor = textLabel.fontColor;
         this._textLabelAlign = textLabel.horizontalAlign;
 
         let elem = this._elem;
         // font size
-        elem.style.fontSize = `${textLabel.fontSize}px`;
+        elem.style.fontSize = `${fontSize}px`;
         // font color
-        elem.style.color = textLabel.node.color.toCSS('rgba');
+        elem.style.color = textLabel.node.color.toCSS();
         // font family
         elem.style.fontFamily = font;
         // text-align
@@ -576,9 +576,12 @@ Object.assign(WebEditBoxImpl.prototype, {
             font = placeholderLabel.fontFamily;
         }
 
+        // get font size
+        let fontSize = placeholderLabel.fontSize * placeholderLabel.node.scaleY;
+
         // whether need to update
         if (this._placeholderLabelFont === font
-            && this._placeholderLabelFontSize === placeholderLabel.fontSize
+            && this._placeholderLabelFontSize === fontSize
             && this._placeholderLabelFontColor === placeholderLabel.fontColor
             && this._placeholderLabelAlign === placeholderLabel.horizontalAlign
             && this._placeholderLineHeight === placeholderLabel.fontSize) {
@@ -587,16 +590,15 @@ Object.assign(WebEditBoxImpl.prototype, {
 
         // update cache
         this._placeholderLabelFont = font;
-        this._placeholderLabelFontSize = placeholderLabel.fontSize;
+        this._placeholderLabelFontSize = fontSize;
         this._placeholderLabelFontColor = placeholderLabel.fontColor;
         this._placeholderLabelAlign = placeholderLabel.horizontalAlign;
         this._placeholderLineHeight = placeholderLabel.fontSize;
 
         let styleEl = this._placeholderStyleSheet;
-        // font size
-        let fontSize = placeholderLabel.fontSize;
+        
         // font color
-        let fontColor = placeholderLabel.node.color.toCSS('rgba');
+        let fontColor = placeholderLabel.node.color.toCSS();
         // line height
         let lineHeight = placeholderLabel.fontSize;  // top vertical align by default
         // horizontal align
@@ -613,32 +615,13 @@ Object.assign(WebEditBoxImpl.prototype, {
                 break;
         }
 
-        styleEl.innerHTML = `
-            #${this._domId}::-webkit-input-placeholder {
-                text-transform: initial;
-                font-family: ${font};
-                font-size: ${fontSize}px;
-                color: ${fontColor};
-                line-height: ${lineHeight}px;
-                text-align: ${horizontalAlign};
-            }
-            #${this._domId}::-moz-placeholder {
-                text-transform: initial;
-                font-family: ${font};
-                font-size: ${fontSize}px;
-                color: ${fontColor};
-                line-height: ${lineHeight}px;
-                text-align: ${horizontalAlign};
-            }
-            #${this._domId}:-ms-input-placeholder {
-                text-transform: initial;
-                font-family: ${font};
-                font-size: ${fontSize}px;
-                color: ${fontColor};
-                line-height: ${lineHeight}px;
-                text-align: ${horizontalAlign};
-            }
-        `;
+        styleEl.innerHTML = `#${this._domId}::-webkit-input-placeholder,#${this._domId}::-moz-placeholder,#${this._domId}:-ms-input-placeholder` +
+        `{text-transform: initial; font-family: ${font}; font-size: ${fontSize}px; color: ${fontColor}; line-height: ${lineHeight}px; text-align: ${horizontalAlign};}`;
+        // EDGE_BUG_FIX: hide clear button, because clearing input box in Edge does not emit input event 
+        // issue refference: https://github.com/angular/angular/issues/26307
+        if (cc.sys.browserType === cc.sys.BROWSER_TYPE_EDGE) {
+            styleEl.innerHTML += `#${this._domId}::-ms-clear{display: none;}`;
+        }
     },
 
     // ===========================================
@@ -661,6 +644,11 @@ Object.assign(WebEditBoxImpl.prototype, {
         cbs.onInput = function () {
             if (inputLock) {
                 return;
+            }
+            // input of number type doesn't support maxLength attribute
+            let maxLength = impl._delegate.maxLength;
+            if (maxLength >= 0) {
+                elem.value = elem.value.slice(0, maxLength);
             }
             impl._delegate.editBoxTextChanged(elem.value);
         };
@@ -695,12 +683,15 @@ Object.assign(WebEditBoxImpl.prototype, {
         };
 
         cbs.onBlur = function () {
+            // on mobile, sometimes input element doesn't fire compositionend event
+            if (cc.sys.isMobile && inputLock) {
+                cbs.compositionEnd();
+            }
             impl._editing = false;
             _currentEditBoxImpl = null;
             impl._hideDom();
             impl._delegate.editBoxEditingDidEnded();
         };
-
 
         elem.addEventListener('compositionstart', cbs.compositionStart);
         elem.addEventListener('compositionend', cbs.compositionEnd);

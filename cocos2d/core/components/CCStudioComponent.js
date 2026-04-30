@@ -55,7 +55,7 @@ var StudioComponent = cc.Class({
     extends: cc.Component,
 
     editor: CC_EDITOR && {
-        inspector: 'unpack://engine-dev/extensions/cocostudio/editor/studio-component.js'
+        inspector: 'unpack://engine/extensions/cocostudio/editor/studio-component.js'
     },
 
     properties: CC_EDITOR && {
@@ -286,32 +286,6 @@ var StudioComponent = cc.Class({
         VerticalAlign : VerticalAlign,
         HorizontalAlign : HorizontalAlign
     },
-});
-
-var PrefabHelper = require('../utils/prefab-helper');
-StudioComponent.PlaceHolder = cc.Class({
-    name: 'cc.StudioComponent.PlaceHolder',
-    extends: cc.Component,
-    properties: {
-        _baseUrl: '',
-        nestedPrefab: cc.Prefab,
-    },
-    onLoad: function () {
-        if (!this.nestedPrefab) {
-            if (CC_DEV) {
-                cc.warn('Unable to find %s resource.', this._baseUrl);
-            }
-            return;
-        }
-        this._replaceWithNestedPrefab();
-    },
-    _replaceWithNestedPrefab: function () {
-        var node = this.node;
-        var _prefab = node._prefab;
-        _prefab.root = node;
-        _prefab.asset = this.nestedPrefab;
-        PrefabHelper.syncWithPrefab(node);
-    }
 });
 
 cc.StudioComponent = module.exports = StudioComponent;

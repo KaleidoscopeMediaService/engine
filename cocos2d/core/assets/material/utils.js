@@ -15,15 +15,19 @@ import enums from '../../../renderer/enums';
 //     return hash;
 // }
 
-function serializeDefines (defines) {
-    let str = '';
-    for (let name in defines) {
-        str += name + defines[name];
+const hashArray = [];
+
+function serializeDefines (defines, names) {
+    const len = names.length;
+    for (let i = 0; i < len; i++) {
+        const name = names[i];
+        hashArray[i] = name + defines[name];
     }
-    return str;
+    hashArray.length = len;
+    return hashArray.join('');
 }
 
-function serializePass (pass) {
+function serializePass (pass, excludeProperties) {
     let str = pass._programName + pass._cullMode;
     if (pass._blend) {
         str += pass._blendEq + pass._blendAlphaEq + pass._blendSrc + pass._blendDst
@@ -40,74 +44,47 @@ function serializePass (pass) {
             + pass._stencilFailOpBack + pass._stencilZFailOpBack + pass._stencilZPassOpBack
             + pass._stencilWriteMaskBack;
     }
+
+    if (!excludeProperties) {
+        str += serializeUniforms(pass._properties, pass._propertyNames);
+    }
+    str += serializeDefines(pass._defines, pass._defineNames);
+
     return str;
 }
 
-function serializeTechniques (techniques) {
+function serializePasses (passes) {
     let hashData = '';
-    for (let i = 0; i < techniques.length; i++) {
-        let techData = techniques[i];
-        // technique.stageIDs
-        hashData += techData.stageIDs;
-        // technique._layer
-        // hashData += + techData._layer + "_";
-        // technique.passes
-        for (let j = 0; j < techData.passes.length; j++) {
-            hashData += serializePass(techData.passes[j]);
-        }
+    for (let i = 0; i < passes.length; i++) {
+        hashData += serializePass(passes[i]);
     }
     return hashData;
 }
 
-function serializeUniforms (uniforms) {
-    let hashData = '';
-    for (let name in uniforms) {
-        let param = uniforms[name];
+function serializeUniforms (uniforms, names) {
+    let index = 0;
+    for (let i = 0, len = names.length; i < len; i++) {
+        let param = uniforms[names[i]];
         let prop = param.value;
 
         if (!prop) {
             continue;
         }
-        switch (param.type) {
-            case enums.PARAM_INT:
-            case enums.PARAM_FLOAT:
-                hashData += prop + ';';
-                break;
-            case enums.PARAM_INT2:
-            case enums.PARAM_FLOAT2:
-                hashData += prop.x + ',' + prop.y + ';';
-                break;
-            case enums.PARAM_INT4:
-            case enums.PARAM_FLOAT4:
-                hashData += prop.x + ',' + prop.y + ',' + prop.z + ',' + prop.w + ';';
-                break;
-            case enums.PARAM_COLOR4:
-                hashData += prop.r + ',' + prop.g + ',' + prop.b + ',' + prop.a + ';';
-                break;
-            case enums.PARAM_MAT2:
-                hashData += prop.m00 + ',' + prop.m01 + ',' + prop.m02 + ',' + prop.m03 + ';';
-                break;
-            case enums.PARAM_TEXTURE_2D:
-            case enums.PARAM_TEXTURE_CUBE:
-                hashData += prop._id + ';';
-                break;
-            case enums.PARAM_INT3:
-            case enums.PARAM_FLOAT3:
-            case enums.PARAM_COLOR3:
-            case enums.PARAM_MAT3:
-            case enums.PARAM_MAT4:
-                hashData += JSON.stringify(prop) + ';';
-                break;
-            default:
-                break;
-        }
-    }
 
-    return hashData;
+        if (param.type === enums.PARAM_TEXTURE_2D || param.type === enums.PARAM_TEXTURE_CUBE) {
+            hashArray[index] = prop._id;
+        }
+        else {
+            hashArray[index] = prop.toString();
+        }
+        index++
+    }
+    hashArray.length = index;
+    return hashArray.join(';');
 }
 
 export default {
     serializeDefines,
-    serializeTechniques,
+    serializePasses,
     serializeUniforms
 };

@@ -26,7 +26,6 @@
  ****************************************************************************/
 
 const EventTarget = require("../event/event-target");
-const textureUtil = require('../utils/texture-util');
 
 const INSET_LEFT = 0;
 const INSET_TOP = 1;
@@ -53,7 +52,7 @@ let temp_uvs = [{u: 0, v: 0}, {u: 0, v: 0}, {u: 0, v: 0}, {u: 0, v: 0}];
  * // load a cc.SpriteFrame with image path (Recommend)
  * var self = this;
  * var url = "test assets/PurpleMonster";
- * cc.loader.loadRes(url, cc.SpriteFrame, function (err, spriteFrame) {
+ * cc.resources.load(url, cc.SpriteFrame, null, function (err, spriteFrame) {
  *  var node = new cc.Node("New Sprite");
  *  var sprite = node.addComponent(cc.Sprite);
  *  sprite.spriteFrame = spriteFrame;
@@ -78,20 +77,9 @@ let SpriteFrame = cc.Class(/** @lends cc.SpriteFrame# */{
                     if (this._texture !== texture) {
                         this._refreshTexture(texture);
                     }
-                    this._textureFilename = texture.url;
                 }
             }
         },
-
-        // _textureFilename: {
-        //     get () {
-        //         return (this._texture && this._texture.url) || "";
-        //     },
-        //     set (url) {
-        //         let texture = cc.textureCache.addImage(url);
-        //         this._refreshTexture(texture);
-        //     }
-        // },
 
         /**
          * !#en Top border of the sprite
@@ -209,13 +197,14 @@ let SpriteFrame = cc.Class(/** @lends cc.SpriteFrame# */{
 
         this._rotated = false;
 
+        this._flipX = false;
+        this._flipY = false;
+
         this.vertices = null;
 
         this._capInsets = [0, 0, 0, 0];
 
         this.uvSliced = [];
-
-        this._textureFilename = '';
 
         if (CC_EDITOR) {
             // Atlas asset uuid
@@ -239,6 +228,19 @@ let SpriteFrame = cc.Class(/** @lends cc.SpriteFrame# */{
         return this._texture && this._texture.loaded;
     },
 
+    onTextureLoaded: function (callback, target) {
+        if (this.textureLoaded()) {
+            callback.call(target);
+        }
+        else {
+            this.once('load', callback, target);
+            this.ensureLoadTexture();
+            return false;
+        }
+
+        return true;
+    },
+
     /**
      * !#en Returns whether the sprite frame is rotated in the texture.
      * !#zh 获取 SpriteFrame 是否旋转
@@ -257,8 +259,55 @@ let SpriteFrame = cc.Class(/** @lends cc.SpriteFrame# */{
      */
     setRotated: function (bRotated) {
         this._rotated = bRotated;
-        if (this._texture)
+        if (this._texture) {
             this._calculateUV();
+        }
+    },
+
+    /**
+     * !#en Returns whether the sprite frame is flip x axis in the texture.
+     * !#zh 获取 SpriteFrame 是否反转 x 轴
+     * @method isFlipX
+     * @return {Boolean}
+     */
+    isFlipX: function () {
+        return this._flipX;
+    },
+
+    /**
+     * !#en Returns whether the sprite frame is flip y axis in the texture.
+     * !#zh 获取 SpriteFrame 是否反转 y 轴
+     * @method isFlipY
+     * @return {Boolean}
+     */
+    isFlipY: function () {
+        return this._flipY;
+    },
+
+    /**
+     * !#en Set whether the sprite frame is flip x axis in the texture.
+     * !#zh 设置 SpriteFrame 是否翻转 x 轴
+     * @method setFlipX
+     * @param {Boolean} flipX
+     */
+    setFlipX: function (flipX) {
+        this._flipX = flipX;
+        if (this._texture) {
+            this._calculateUV();
+        }
+    },
+
+    /**
+     * !#en Set whether the sprite frame is flip y axis in the texture.
+     * !#zh 设置 SpriteFrame 是否翻转 y 轴
+     * @method setFlipY
+     * @param {Boolean} flipY
+     */
+    setFlipY: function (flipY) {
+        this._flipY = flipY;
+        if (this._texture) {
+            this._calculateUV();
+        }
     },
 
     /**
@@ -279,10 +328,11 @@ let SpriteFrame = cc.Class(/** @lends cc.SpriteFrame# */{
      */
     setRect: function (rect) {
         this._rect = rect;
-        if (this._texture)
+        if (this._texture) {
             this._calculateUV();
+        }
     },
-    
+
     /**
      * !#en Returns the original size of the trimmed image.
      * !#zh 获取修剪前的原始大小
@@ -318,7 +368,7 @@ let SpriteFrame = cc.Class(/** @lends cc.SpriteFrame# */{
         return this._texture;
     },
 
-    _textureLoadedCallback () {
+    _textureLoadedCallback: function () {
         let self = this;
         let texture = this._texture;
         if (!texture) {
@@ -335,11 +385,11 @@ let SpriteFrame = cc.Class(/** @lends cc.SpriteFrame# */{
         }
 
         if (!self._originalSize) {
-            self.setOriginalSize(cc.size(w, h));
+            self._originalSize = cc.size(w, h);
         }
 
         if (!self._offset) {
-            self.setOffset(cc.v2(0, 0));
+            self._offset = cc.v2(0, 0);
         }
 
         self._calculateUV();
@@ -390,22 +440,24 @@ let SpriteFrame = cc.Class(/** @lends cc.SpriteFrame# */{
      * @method clone
      * @return {SpriteFrame}
      */
-    clone: function () {
-        return new SpriteFrame(this._texture || this._textureFilename, this._rect, this._rotated, this._offset, this._originalSize);
+    clone: function() {
+        return new SpriteFrame(this._texture, this.getRect(), this._rotated, this.getOffset(), this.getOriginalSize());
     },
 
     /**
      * !#en Set SpriteFrame with Texture, rect, rotated, offset and originalSize.<br/>
      * !#zh 通过 Texture，rect，rotated，offset 和 originalSize 设置 SpriteFrame。
      * @method setTexture
-     * @param {String|Texture2D} textureOrTextureFile
+     * @param {Texture2D} texture
      * @param {Rect} [rect=null]
      * @param {Boolean} [rotated=false]
      * @param {Vec2} [offset=cc.v2(0,0)]
      * @param {Size} [originalSize=rect.size]
      * @return {Boolean}
      */
-    setTexture: function (textureOrTextureFile, rect, rotated, offset, originalSize) {
+    setTexture: function (texture, rect, rotated, offset, originalSize) {
+        if (arguments.length === 1 && texture === this._texture) return;
+
         if (rect) {
             this._rect = rect;
         }
@@ -429,24 +481,15 @@ let SpriteFrame = cc.Class(/** @lends cc.SpriteFrame# */{
 
         this._rotated = rotated || false;
 
-        // loading texture
-        let texture = textureOrTextureFile;
-        if (typeof texture === 'string' && texture) {
-            this._textureFilename = texture;
-            this._loadTexture();
+        if (typeof texture === 'string') {
+            cc.errorID(3401);
+            return;
         }
-        if (texture instanceof cc.Texture2D && this._texture !== texture) {
+        if (texture instanceof cc.Texture2D) {
             this._refreshTexture(texture);
         }
 
         return true;
-    },
-
-    _loadTexture: function () {
-        if (this._textureFilename) {
-            let texture = textureUtil.loadImage(this._textureFilename);
-            this._refreshTexture(texture);
-        }
     },
 
     /**
@@ -472,12 +515,8 @@ let SpriteFrame = cc.Class(/** @lends cc.SpriteFrame# */{
             if (!this._texture.loaded) {
                 // load exists texture
                 this._refreshTexture(this._texture);
-                textureUtil.postLoadTexture(this._texture);
+                cc.assetManager.postLoadNative(this._texture);
             }
-        }
-        else if (this._textureFilename) {
-            // load new texture
-            this._loadTexture();
         }
     },
 
@@ -502,14 +541,36 @@ let SpriteFrame = cc.Class(/** @lends cc.SpriteFrame# */{
             maxY += rect.height;
         }
         if (maxX > texture.width) {
-            cc.errorID(3300, texture.url + '/' + this.name, maxX, texture.width);
+            cc.errorID(3300, texture.nativeUrl + '/' + this.name, maxX, texture.width);
         }
         if (maxY > texture.height) {
-            cc.errorID(3400, texture.url + '/' + this.name, maxY, texture.height);
+            cc.errorID(3400, texture.nativeUrl + '/' + this.name, maxY, texture.height);
         }
     },
 
-    _calculateSlicedUV () {
+    _flipXY: function (uvs) {
+        if (this._flipX) {
+            let tempVal = uvs[0];
+            uvs[0] = uvs[1];
+            uvs[1] = tempVal;
+
+            tempVal = uvs[2];
+            uvs[2] = uvs[3];
+            uvs[3] = tempVal;
+        }
+
+        if (this._flipY) {
+            let tempVal = uvs[0];
+            uvs[0] = uvs[2];
+            uvs[2] = tempVal;
+
+            tempVal = uvs[1];
+            uvs[1] = uvs[3];
+            uvs[3] = tempVal;
+        }
+    },
+
+    _calculateSlicedUV: function () {
         let rect = this._rect;
         let atlasWidth = this._texture.width;
         let atlasHeight = this._texture.height;
@@ -532,6 +593,8 @@ let SpriteFrame = cc.Class(/** @lends cc.SpriteFrame# */{
             temp_uvs[1].v = (rect.y + leftWidth + centerWidth) / atlasHeight;
             temp_uvs[0].v = (rect.y + rect.width) / atlasHeight;
 
+            this._flipXY(temp_uvs);
+
             for (let row = 0; row < 4; ++row) {
                 let rowD = temp_uvs[row];
                 for (let col = 0; col < 4; ++col) {
@@ -553,6 +616,8 @@ let SpriteFrame = cc.Class(/** @lends cc.SpriteFrame# */{
             temp_uvs[1].v = (rect.y + topHeight + centerHeight) / atlasHeight;
             temp_uvs[0].v = (rect.y + rect.height) / atlasHeight;
 
+            this._flipXY(temp_uvs);
+
             for (let row = 0; row < 4; ++row) {
                 let rowD = temp_uvs[row];
                 for (let col = 0; col < 4; ++col) {
@@ -566,7 +631,7 @@ let SpriteFrame = cc.Class(/** @lends cc.SpriteFrame# */{
         }
     },
 
-    _setDynamicAtlasFrame (frame) {
+    _setDynamicAtlasFrame: function (frame) {
         if (!frame) return;
 
         this._original = {
@@ -574,23 +639,27 @@ let SpriteFrame = cc.Class(/** @lends cc.SpriteFrame# */{
             _x : this._rect.x,
             _y : this._rect.y
         }
-        
+
         this._texture = frame.texture;
         this._rect.x = frame.x;
         this._rect.y = frame.y;
         this._calculateUV();
     },
 
-    _resetDynamicAtlasFrame () {
+    _resetDynamicAtlasFrame: function () {
         if (!this._original) return;
         this._rect.x = this._original._x;
         this._rect.y = this._original._y;
         this._texture = this._original._texture;
         this._original = null;
-        this._calculateUV();
+        if (this._texture.loaded) {
+            this._calculateUV();
+        } else {
+            this.ensureLoadTexture()
+        }
     },
 
-    _calculateUV () {
+    _calculateUV: function () {
         let rect = this._rect,
             texture = this._texture,
             uv = this.uv,
@@ -626,6 +695,42 @@ let SpriteFrame = cc.Class(/** @lends cc.SpriteFrame# */{
             uv[7] = t;
         }
 
+        if (this._flipX) {
+            let tempVal = uv[0];
+            uv[0] = uv[2];
+            uv[2] = tempVal;
+
+            tempVal = uv[1];
+            uv[1] = uv[3];
+            uv[3] = tempVal;
+
+            tempVal = uv[4];
+            uv[4] = uv[6];
+            uv[6] = tempVal;
+
+            tempVal = uv[5];
+            uv[5] = uv[7];
+            uv[7] = tempVal;
+        }
+
+        if (this._flipY) {
+            let tempVal = uv[0];
+            uv[0] = uv[4];
+            uv[4] = tempVal;
+
+            tempVal = uv[1];
+            uv[1] = uv[5];
+            uv[5] = tempVal;
+
+            tempVal = uv[2];
+            uv[2] = uv[6];
+            uv[6] = tempVal;
+
+            tempVal = uv[3];
+            uv[3] = uv[7];
+            uv[7] = tempVal;
+        }
+
         let vertices = this.vertices;
         if (vertices) {
             vertices.nu.length = 0;
@@ -641,7 +746,7 @@ let SpriteFrame = cc.Class(/** @lends cc.SpriteFrame# */{
 
     // SERIALIZATION
 
-    _serialize: CC_EDITOR && function (exporting) {
+    _serialize: (CC_EDITOR || CC_TEST) && function (exporting, ctx) {
         let rect = this._rect;
         let offset = this._offset;
         let size = this._originalSize;
@@ -658,6 +763,7 @@ let SpriteFrame = cc.Class(/** @lends cc.SpriteFrame# */{
         }
         if (uuid && exporting) {
             uuid = Editor.Utils.UuidUtils.compressUuid(uuid, true);
+            ctx.dependsOn('_textureSetter', uuid);
         }
 
         let vertices;
@@ -673,7 +779,7 @@ let SpriteFrame = cc.Class(/** @lends cc.SpriteFrame# */{
 
         return {
             name: this._name,
-            texture: uuid || undefined,
+            texture: (!exporting && uuid) || undefined,
             atlas: exporting ? undefined : this._atlasUuid,  // strip from json if exporting
             rect: rect ? [rect.x, rect.y, rect.width, rect.height] : undefined,
             offset: offset ? [offset.x, offset.y] : undefined,
@@ -717,10 +823,12 @@ let SpriteFrame = cc.Class(/** @lends cc.SpriteFrame# */{
             this.vertices.nv = [];
         }
 
-        // load texture via _textureSetter
-        let textureUuid = data.texture;
-        if (textureUuid) {
-            handle.result.push(this, '_textureSetter', textureUuid);
+        if (!CC_BUILD) {
+            // manually load texture via _textureSetter
+            let textureUuid = data.texture;
+            if (textureUuid) {
+                handle.result.push(this, '_textureSetter', textureUuid);
+            }
         }
     }
 });

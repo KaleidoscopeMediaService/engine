@@ -8,7 +8,7 @@ export default class TextureCube extends Texture {
    * @param {Device} device
    * @param {Object} options
    * @param {Array} options.images
-   * @param {Boolean} options.mipmap
+   * @param {Boolean} options.genMipmaps
    * @param {Number} options.width
    * @param {Number} options.height
    * @param {TEXTURE_FMT_*} options.format
@@ -34,7 +34,7 @@ export default class TextureCube extends Texture {
    * @method update
    * @param {Object} options
    * @param {Array} options.images
-   * @param {Boolean} options.mipmap
+   * @param {Boolean} options.genMipmaps
    * @param {Number} options.width
    * @param {Number} options.height
    * @param {TEXTURE_FMT_*} options.format
@@ -50,7 +50,7 @@ export default class TextureCube extends Texture {
    */
   update(options) {
     let gl = this._device._gl;
-    let genMipmap = this._hasMipmap;
+    let genMipmaps = this._genMipmaps;
 
     if (options) {
       if (options.width !== undefined) {
@@ -83,21 +83,22 @@ export default class TextureCube extends Texture {
       // }
       if (options.format !== undefined) {
         this._format = options.format;
-        this._compressed = 
-          (this._format >= enums.TEXTURE_FMT_RGB_DXT1 && this._format <= enums.TEXTURE_FMT_RGBA_PVRTC_4BPPV1) || 
-          (this._format >= enums.TEXTURE_FMT_RGB_ETC2 && this._format <= enums.TEXTURE_FMT_RGBA_ETC2)
+        this._compressed =
+          (this._format >= enums.TEXTURE_FMT_RGB_DXT1 && this._format <= enums.TEXTURE_FMT_RGBA_PVRTC_4BPPV1) ||
+          (this._format >= enums.TEXTURE_FMT_RGB_ETC2 && this._format <= enums.TEXTURE_FMT_RGBA_ETC2) ||
+          (this._format >= enums.TEXTURE_FMT_RGBA_ASTC_4X4 && this._format <= enums.TEXTURE_FMT_SRGBA_ASTC_12X12)
         ;
       }
 
       // check if generate mipmap
-      if (options.mipmap !== undefined) {
-        this._hasMipmap = options.mipmap;
-        genMipmap = options.mipmap;
+      if (options.genMipmaps !== undefined) {
+        this._genMipmaps = options.genMipmaps;
+        genMipmaps = options.genMipmaps;
       }
 
       if (options.images !== undefined) {
         if (options.images.length > 1) {
-          genMipmap = false;
+          genMipmaps = false;
           if (options.width !== options.height) {
             console.warn('texture-cube width and height should be identical.');
           }
@@ -111,19 +112,19 @@ export default class TextureCube extends Texture {
     // NOTE: get pot after this._width, this._height has been assigned.
     let pot = isPow2(this._width) && isPow2(this._height);
     if (!pot) {
-      genMipmap = false;
+      genMipmaps = false;
     }
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_CUBE_MAP, this._glID);
     if (options.images !== undefined && options.images.length > 0) {
       this._setMipmap(options.images, options.flipY, options.premultiplyAlpha);
-      if (options.images.length > 1) this._hasMipmap = true;
+      if (options.images.length > 1) this._genMipmaps = true;
     }
-    if (genMipmap) {
+    if (genMipmaps) {
       gl.hint(gl.GENERATE_MIPMAP_HINT, gl.NICEST);
       gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
-      this._hasMipmap = true;
+      this._genMipmaps = true;
     }
 
     this._setTexInfo();
@@ -317,7 +318,7 @@ export default class TextureCube extends Texture {
       this._wrapT = enums.WRAP_CLAMP;
     }
 
-    let mipFilter = this._hasMipmap ? this._mipFilter : -1;
+    let mipFilter = this._genMipmaps ? this._mipFilter : -1;
     if (!pot && mipFilter !== -1) {
       console.warn('NPOT textures do not support mipmap filter');
       mipFilter = -1;
