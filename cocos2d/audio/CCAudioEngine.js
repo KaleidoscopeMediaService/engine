@@ -83,7 +83,7 @@ let getAudioFromPath = function (path) {
         if (this._finishCallback) {
             this._finishCallback();
         }
-        if(!this.getLoop()){
+        if (!this.getLoop()) {
             callback.call(this);
         }
     }, audio);
@@ -100,7 +100,7 @@ let getAudioFromId = function (id) {
     return _id2audio[id];
 };
 
-let handleVolume  = function (volume) {
+let handleVolume = function (volume) {
     if (volume === undefined) {
         // set default volume as 1
         volume = 1;
@@ -140,25 +140,34 @@ var audioEngine = {
      * @param {AudioClip} clip - The audio clip to play.
      * @param {Boolean} loop - Whether the music loop or not.
      * @param {Number} volume - Volume size.
+     * @param {Number} playbackRate - Playback rate, default is 1.0.
      * @return {Number} audioId
      * @example
      * cc.resources.load(path, cc.AudioClip, null, function (err, clip) {
-     *     var audioID = cc.audioEngine.play(clip, false, 0.5);
+     *     var audioID = cc.audioEngine.play(clip, false, 0.5, 1.0);
      * });
      */
-    play: function (clip, loop, volume) {
+    play: function (clip, loop, volume, playbackRate) {
         if (CC_EDITOR) {
             return;
         }
+
         if (!(clip instanceof AudioClip)) {
             return cc.error('Wrong type of AudioClip.');
         }
+
+        if (playbackRate === undefined) {
+            // set default playback rate as 1
+            playbackRate = 1;
+        }
+
         let path = clip.nativeUrl;
         let audio = getAudioFromPath(path);
         audio.src = clip;
         clip._ensureLoaded();
         audio._shouldRecycleOnEnded = true;
         audio.setLoop(loop || false);
+        audio.setPlaybackRate(playbackRate);
         volume = handleVolume(volume);
         audio.setVolume(volume);
         audio.play();
@@ -195,6 +204,34 @@ var audioEngine = {
         if (!audio || !audio.getLoop)
             return false;
         return audio.getLoop();
+    },
+
+    /**
+     * !#en Set the playback rate of audio.
+     * @method setPlaybackRate
+     * @param {Number} audioID - audio id.
+     * @param {Number} playbackRate - Playback rate, default is 1.0.
+     * @example
+     * cc.audioEngine.setPlaybackRate(id, 0.5);
+     */
+    setPlaybackRate: function (audioID, playbackRate) {
+        var audio = getAudioFromId(audioID);
+        if (audio) {
+            audio.setPlaybackRate(playbackRate);
+        }
+    },
+
+    /**
+     * !#en Get the playback rate of audio.
+     * @method getPlaybackRate
+     * @param {Number} audioID - audio id.
+     * @return {Number}
+     * @example
+     * var playbackRate = cc.audioEngine.getPlaybackRate(id);
+     */
+    getPlaybackRate: function (audioID) {
+        var audio = getAudioFromId(audioID);
+        return audio ? audio.getPlaybackRate() : 1;
     },
 
     /**
@@ -298,7 +335,7 @@ var audioEngine = {
      * @example
      * cc.audioEngine.isPlaying(audioID);
      */
-    isPlaying: function(audioID) {
+    isPlaying: function (audioID) {
         return this.getState(audioID) === this.AudioState.PLAYING;
     },
 
@@ -437,7 +474,7 @@ var audioEngine = {
     setMaxAudioInstance: function (num) {
         if (CC_DEBUG) {
             cc.warn('Since v2.4.0, maxAudioInstance has become a read only property.\n'
-            + 'audioEngine.setMaxAudioInstance() method will be removed in the future');
+                + 'audioEngine.setMaxAudioInstance() method will be removed in the future');
         }
     },
 

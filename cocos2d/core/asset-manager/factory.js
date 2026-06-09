@@ -50,6 +50,9 @@ function createAudioClip (id, data, options, onComplete) {
 }
 
 function createVideoClip (id, data, options, onComplete) {
+    if (!cc.VideoClip) {
+        require('../assets/CCVideoClip');
+    }
     let out = new cc.VideoClip();
     out._nativeUrl = id;
     out._nativeAsset = data;

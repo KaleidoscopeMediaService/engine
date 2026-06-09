@@ -147,7 +147,7 @@ exports.buildCocosJs = function (sourceFile, outputFile, excludes, opt_macroFlag
     }
 
     bundler = bundler.pipe(Gulp.dest(outDir));
-    return bundler.on('end', callback);
+    return bundler.on('finish', callback);
 };
 
 exports.buildCocosJsMin = function (sourceFile, outputFile, excludes, opt_macroFlags, callback, createMap) {
@@ -215,7 +215,7 @@ exports.buildCocosJsMin = function (sourceFile, outputFile, excludes, opt_macroF
         }));
     }
     bundler = bundler.pipe(Gulp.dest(outDir));
-    return bundler.on('end', callback);
+    return bundler.on('finish', callback);
 };
 
 exports.buildPreview = function (sourceFile, outputFile, callback, devMode) {
@@ -249,7 +249,7 @@ exports.buildPreview = function (sourceFile, outputFile, callback, devMode) {
     }
     bundler
         .pipe(Gulp.dest(outDir))
-        .on('end', callback);
+        .on('finish', callback);
 };
 
 exports.buildJsbPreview = function (sourceFile, outputFile, excludes, callback) {
@@ -276,7 +276,7 @@ exports.buildJsbPreview = function (sourceFile, outputFile, excludes, callback) 
             sourceMap: false
         }))
         .pipe(Gulp.dest(outDir))
-        .on('end', callback);
+        .on('finish', callback);
 };
 
 exports.buildJsb = function (sourceFile, outputFile, excludes, opt_macroFlags, callback, createMap) {
@@ -337,7 +337,7 @@ exports.buildJsb = function (sourceFile, outputFile, excludes, opt_macroFlags, c
             }
         })
         .pipe(Gulp.dest(outDir))
-        .on('end', callback);
+        .on('finish', callback);
 };
 
 exports.buildJsbMin = function (sourceFile, outputFile, excludes, opt_macroFlags, callback, createMap) {
@@ -401,7 +401,7 @@ exports.buildJsbMin = function (sourceFile, outputFile, excludes, opt_macroFlags
             }
         })
         .pipe(Gulp.dest(outDir))
-        .on('end', callback);
+        .on('finish', callback);
 };
 
 exports.buildRuntime = function (sourceFile, outputFile, excludes, opt_macroFlags, callback, createMap) {
@@ -446,7 +446,7 @@ exports.buildRuntime = function (sourceFile, outputFile, excludes, opt_macroFlag
             sourceMap: false
         }))
         .pipe(Gulp.dest(outDir))
-        .on('end', callback);
+        .on('finish', callback);
 };
 
 exports.buildRuntimeMin = function (sourceFile, outputFile, excludes, opt_macroFlags, callback, createMap) {
@@ -493,7 +493,7 @@ exports.buildRuntimeMin = function (sourceFile, outputFile, excludes, opt_macroF
             sourceMap: false
         }))
         .pipe(Gulp.dest(outDir))
-        .on('end', callback);
+        .on('finish', callback);
 };
 
 exports.excludeAllDepends = function (excludedModules) {

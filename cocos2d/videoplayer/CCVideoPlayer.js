@@ -25,6 +25,7 @@
  ****************************************************************************/
 
 const VideoPlayerImpl = require('./video-player-impl');
+require('../core/assets/CCVideoClip');
 
 /**
  * !#en Video event type

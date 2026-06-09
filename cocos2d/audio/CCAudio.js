@@ -232,6 +232,20 @@ Audio.State = {
         return this._element ? this._element.loop : false;
     };
 
+    /** 
+     * 追加実装
+     * playbackRate(音声再生速度)
+     */
+    proto.setPlaybackRate = function (num) {
+        let self = this;
+        this._src && this._src._ensureLoaded(function () {
+            self._element.playbackRate = num;
+        });
+    };
+    proto.getPlaybackRate = function () {
+        return this._element ? this._element.playbackRate : 1;
+    };
+
     proto.setVolume = function (num) {
         let self = this;
         this._src && this._src._ensureLoaded(function () {
@@ -457,7 +471,7 @@ let WebAudioElement = function (buffer, audio) {
         this.playedLength %= this._buffer.duration;
         let audio = this._currentSource;
         if (audio) {
-            if(audio.onended){
+            if (audio.onended) {
                 audio.onended._binded = false;
                 audio.onended = null;
             }
@@ -494,6 +508,20 @@ let WebAudioElement = function (buffer, audio) {
                 this._currentSource.loop = bool;
 
             return this._loop = bool;
+        },
+        enumerable: true,
+        configurable: true
+    });
+
+    Object.defineProperty(proto, 'playbackRate', {
+        get: function () {
+            return this._playbackRate;
+        },
+        set: function (num) {
+            this._playbackRate = num;
+            if (this._currentSource) {
+                this._currentSource.playbackRate = num;
+            }
         },
         enumerable: true,
         configurable: true

@@ -79,6 +79,15 @@ let SkeletonData = cc.Class({
             }
         },
 
+        skeletonBinary: {
+            get: function () {
+                return this._nativeAsset;
+            },
+            set: function (value) {
+                this._nativeAsset = value;
+            }
+        },
+
         _atlasText: "",
 
         /**
@@ -130,7 +139,8 @@ let SkeletonData = cc.Class({
                 return this._buffer;
             },
             set (bin) {
-                this._buffer = bin.buffer || bin;
+                // 2.4.x: cc.BufferAsset の実データは _nativeAsset に格納されている
+                this._buffer = (bin && bin._nativeAsset) || bin.buffer || bin;
                 this.reset();
             },
             override: true
